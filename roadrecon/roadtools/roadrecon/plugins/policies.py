@@ -184,6 +184,9 @@ class AccessPoliciesPlugin():
         }
         ot = ''
         for ctype, clist in crit.items():
+            # Figure out what this is later, for now solve this breaking the policies parsing
+            if ctype == 'IsAgentic':
+                continue
             if 'All' in clist:
                 ot += 'All users'
                 break
