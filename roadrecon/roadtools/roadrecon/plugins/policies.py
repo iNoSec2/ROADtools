@@ -32,6 +32,7 @@ import argparse
 import pprint
 import base64
 import zlib
+import traceback
 from html import escape
 from roadtools.roadlib.metadef.database import ServicePrincipal, User, Policy, Application, Group, DirectoryRole
 import roadtools.roadlib.metadef.database as database
@@ -527,6 +528,17 @@ class AccessPoliciesPlugin():
         decoded_cidrs = escape(cstr.decode()).split(",")
         return decoded_cidrs
 
+    @staticmethod
+    def parse_wrapper(func, conditions, policy):
+        """
+        Wrapper to handle failures in parsing policy body better
+        """
+        try:
+            return func(conditions)
+        except Exception as exc:
+            print(f'Error parsing condition in policy {policy.displayName}')
+            traceback.print_exc()
+            return 'Error in parsing: ' + str(exc)
 
     def main(self, should_print=False):
         pp = pprint.PrettyPrinter(indent=4)
@@ -557,16 +569,16 @@ class AccessPoliciesPlugin():
                 if should_print:
                     print('Invalid policy - no conditions')
                 continue
-            out['who'] = self._parse_who(conditions)
+            out['who'] = self.parse_wrapper(self._parse_who, conditions, policy)
             out['status'] = escape(detail['State'])
-            out['applications'] = self._parse_application(conditions)
-            out['authflows'] = self._parse_authflows(conditions)
-            out['platforms'] = self._parse_platform(conditions)
-            out['locations'] = self._parse_locations(conditions)
-            out['clients'] = self._parse_clients(conditions)
-            out['signinrisks'] = self._parse_signinrisks(conditions)
+            out['applications'] = self.parse_wrapper(self._parse_application, conditions, policy)
+            out['authflows'] = self.parse_wrapper(self._parse_authflows, conditions, policy)
+            out['platforms'] = self.parse_wrapper(self._parse_platform, conditions, policy)
+            out['locations'] = self.parse_wrapper(self._parse_locations, conditions, policy)
+            out['clients'] = self.parse_wrapper(self._parse_clients, conditions, policy)
+            out['signinrisks'] = self.parse_wrapper(self._parse_signinrisks, conditions, policy)
             out['sessioncontrols'] = self._parse_sessioncontrols(detail)
-            out['devices'] = self._parse_devices(conditions)
+            out['devices'] = self.parse_wrapper(self._parse_devices, conditions, policy)
 
             try:
                 out['controls'] = self._parse_controls(detail['Controls'])
