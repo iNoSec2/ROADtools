@@ -10,7 +10,13 @@ WELLKNOWN_RESOURCES = {
     "azrm": "https://management.core.windows.net/",
     "azurerm": "https://management.core.windows.net/",
     "outlook": "https://outlook.office.com/",
-    "sharepoint": "00000003-0000-0ff1-ce00-000000000000"
+    "sharepoint": "00000003-0000-0ff1-ce00-000000000000",
+    "enrollment": "https://enrollment.manage.microsoft.com",
+    "ig": "https://elm.iga.azure.com",
+    "iga": "https://elm.iga.azure.com",
+    "elm": "https://elm.iga.azure.com",
+    "pim": "https://api.azrbac.mspim.azure.com",
+    "mspim": "https://api.azrbac.mspim.azure.com",
 }
 
 WELLKNOWN_CLIENTS = {
@@ -23,7 +29,8 @@ WELLKNOWN_CLIENTS = {
     "edge": "ecd6b820-32c2-49b6-98a6-444530e5a77a",
     "msbroker": "29d9ed98-a469-4536-ade2-f981bc1d605e",
     "broker": "29d9ed98-a469-4536-ade2-f981bc1d605e",
-    "companyportal": "9ba1a5c7-f17a-4de9-a1f1-6178c8d51223"
+    "companyportal": "9ba1a5c7-f17a-4de9-a1f1-6178c8d51223",
+    "azureportal": "c44b4083-3bb0-49c1-b47d-974e53cbdf3c"
 }
 
 WELLKNOWN_USER_AGENTS = {
