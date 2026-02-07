@@ -44,7 +44,7 @@ class Authentication():
     """
     Authentication class for ROADtools
     """
-    def __init__(self, username=None, password=None, tenant=None, client_id='1b730954-1685-4b74-9bfd-dac224a7b894'):
+    def __init__(self, username=None, password=None, tenant=None, client_id='04b07795-8ddb-461a-bbee-02f9e1bf7b46'):
         self.username = username
         self.password = password
         self.tenant = tenant
@@ -1511,14 +1511,14 @@ class Authentication():
                                  action='store',
                                  help='Tenant ID to auth to (leave blank for default tenant for account)')
         if for_rr:
-            helptext = 'Client ID to use when authenticating. (Must be a public client from Microsoft with user_impersonation permissions!). Default: Azure AD PowerShell module App ID'
+            helptext = 'Client ID to use when authenticating. (Must be a public client from Microsoft with user_impersonation permissions!). Default: Azure CLI App ID'
         else:
             helptext = 'Client ID to use when authenticating. (Must have the required OAuth2 permissions or Application Role for what you want to achieve)'
         auth_parser.add_argument('-c',
                                  '--client',
                                  action='store',
                                  help=helptext,
-                                 default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                 default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
         auth_parser.add_argument('-r',
                                  '--resource',
                                  action='store',

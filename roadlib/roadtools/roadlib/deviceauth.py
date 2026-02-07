@@ -1062,7 +1062,7 @@ class DeviceAuthentication():
         # Custom redirect_uri if needed
         if redirect_uri:
             payload['redirect_uri'] = redirect_uri
-        elif client == '1b730954-1685-4b74-9bfd-dac224a7b894':
+        elif client == '04b07795-8ddb-461a-bbee-02f9e1bf7b46':
             payload['redirect_uri'] = 'https://login.microsoftonline.com/common/oauth2/nativeclient'
         responsedata = self.request_token_with_sessionkey_signed_payload(payload, False)
         tokendata = self.auth.decrypt_auth_response(responsedata, self.session_key, True)

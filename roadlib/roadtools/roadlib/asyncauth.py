@@ -35,7 +35,7 @@ class AsyncAuthentication(Authentication):
     """
     Authentication class for ROADtools, but with asyncio / aiohttp as base
     """
-    def __init__(self, username=None, password=None, tenant=None, client_id='1b730954-1685-4b74-9bfd-dac224a7b894'):
+    def __init__(self, username=None, password=None, tenant=None, client_id='04b07795-8ddb-461a-bbee-02f9e1bf7b46'):
         super().__init__(username, password, tenant, client_id)
         self.ahsession = None
         self.requestcounter = 0
