@@ -11,6 +11,8 @@ export class ConfigComponent implements OnInit {
   public mfa;
   @LocalStorage()
   public portallinks;
+  @LocalStorage()
+  public paging;
 
   constructor() { }
 

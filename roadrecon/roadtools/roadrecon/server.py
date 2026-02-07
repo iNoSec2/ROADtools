@@ -4,10 +4,20 @@ from flask_marshmallow import Marshmallow
 from flask_cors import CORS
 from marshmallow_sqlalchemy import ModelConverter
 from marshmallow import fields
-from roadtools.roadlib.metadef.database import User, JSON, Group, DirectoryRole, ServicePrincipal, AppRoleAssignment, TenantDetail, Application, Device, OAuth2PermissionGrant, AuthorizationPolicy, DirectorySetting, AdministrativeUnit, RoleDefinition
+from roadtools.roadlib.metadef.database import User, JSON, Group, DirectoryRole, \
+ServicePrincipal, AppRoleAssignment, TenantDetail, Application, Device, \
+OAuth2PermissionGrant, AuthorizationPolicy, DirectorySetting, AdministrativeUnit, \
+RoleDefinition, Policy, lnk_policy_user_include_allusers, PIMgovernanceResource, \
+PIMgovernanceRoleAssignment, PIMgovernanceRoleDefinition, PIMgovernanceRoleSetting, \
+PIMgovernanceRoleSettingV2, IGaccessPackageAssignmentPolicy, IGaccessPackage, \
+IGaccessPackageResourceRoleScope, IGaccessPackageResourceRole, IGaccessPackageResourceScope, \
+AZroleDefinition, AZroleAssignment, AZsubscription, AZroleEligibilityScheduleInstance
 import os
+import base64
+import zlib
 import argparse
-from sqlalchemy import func, and_, or_, select
+import json
+from sqlalchemy import func, and_, or_, select, desc, asc, cast, collate
 import mimetypes
 
 app = Flask(__name__)
@@ -101,6 +111,98 @@ class DirectoryRolesSchema(RTModelSchema):
     memberServicePrincipals = fields.Nested(ServicePrincipalsSchema, many=True)
     memberGroups = fields.Nested(GroupsSchema, many=True)
 
+class PIMgovernanceRoleSettingSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = PIMgovernanceRoleSetting
+
+class PIMgovernanceRoleSettingV2Schema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = PIMgovernanceRoleSettingV2
+
+class PIMgovernanceRoleDefinitionsSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = PIMgovernanceRoleDefinition
+
+    roleSettings = fields.Nested(PIMgovernanceRoleSettingSchema, many=True)
+    roleSettingsv2 = fields.Nested(PIMgovernanceRoleSettingV2Schema, many=True)
+
+class PIMgovernanceResourcesSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = PIMgovernanceResource
+
+class PIMgovernanceRoleAssignmentsSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = PIMgovernanceRoleAssignment
+
+    roleDefinition = fields.Nested(PIMgovernanceRoleDefinitionsSchema)
+    resource = fields.Nested(PIMgovernanceResourcesSchema)
+
+# include members
+class PIMgovernanceRoleAssignmentsWithMembersSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = PIMgovernanceRoleAssignment
+
+    subjectUser = fields.Nested(UsersSchema, many=True)
+    subjectGroup = fields.Nested(GroupsSchema, many=True)
+    subjectServicePrincipal = fields.Nested(ServicePrincipalsSchema, many=True)
+
+class PIMgovernanceRoleDefinitionSchema(RTModelSchema):
+    class Meta:
+        model = PIMgovernanceRoleDefinition
+
+class PIMgovernanceRoleDefinitionWithAssignmentsSchema(RTModelSchema):
+    class Meta:
+        model = PIMgovernanceRoleDefinition
+    roleAssignments = fields.Nested(PIMgovernanceRoleAssignmentsWithMembersSchema, many=True)
+    roleSettings = fields.Nested(PIMgovernanceRoleSettingSchema, many=True)
+    roleSettingsv2 = fields.Nested(PIMgovernanceRoleSettingV2Schema, many=True)
+
+# for individual resources, with more detail
+class PIMgovernanceResourceSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = PIMgovernanceResource
+    roleDefinitions = fields.Nested(PIMgovernanceRoleDefinitionWithAssignmentsSchema, many=True)
+
+
+class IGaccessPackageResourceRolesSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = IGaccessPackageResourceRole
+
+class IGaccessPackageResourceScopesSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = IGaccessPackageResourceScope
+
+class IGaccessPackageResourceRoleScopesSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = IGaccessPackageResourceRoleScope
+    role = fields.Nested(IGaccessPackageResourceRolesSchema, many=True)
+    scope = fields.Nested(IGaccessPackageResourceScopesSchema, many=True)
+
+class IGaccessPackagesSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = IGaccessPackage
+
+    resourceRoleScopes = fields.Nested(IGaccessPackageResourceRoleScopesSchema, many=True)
+
+class IGaccessPackageAssignmentPolicysSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = IGaccessPackageAssignmentPolicy
+    accessPackage = fields.Nested(IGaccessPackagesSchema)
+
+class AZroleDefinitionSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = AZroleDefinition
+
+class AZroleAssignmentsSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = AZroleAssignment
+    role = fields.Nested(AZroleDefinitionSchema)
+
+class AZeligibleRoleAssignmentsSchema(RTModelSchema):
+    class Meta(RTModelSchema.Meta):
+        model = AZroleEligibilityScheduleInstance
+    role = fields.Nested(AZroleDefinitionSchema)
+
 class UserSchema(RTModelSchema):
     class Meta(RTModelSchema.Meta):
         model = User
@@ -110,6 +212,7 @@ class UserSchema(RTModelSchema):
     ownedServicePrincipals = fields.Nested(ServicePrincipalsSchema, many=True)
     ownedApplications = fields.Nested(ApplicationsSchema, many=True)
     ownedGroups = fields.Nested(GroupsSchema, many=True)
+    pimRoleAssignments = fields.Nested(PIMgovernanceRoleAssignmentsSchema, many=True)
 
 class DeviceSchema(RTModelSchema):
     class Meta(RTModelSchema.Meta):
@@ -128,6 +231,7 @@ class GroupSchema(RTModelSchema):
     memberServicePrincipals = fields.Nested(SimpleServicePrincipalsSchema, many=True)
     ownerUsers = fields.Nested(UsersSchema, many=True)
     ownerServicePrincipals = fields.Nested(SimpleServicePrincipalsSchema, many=True)
+    pimRoleAssignments = fields.Nested(PIMgovernanceRoleAssignmentsSchema, many=True)
 
 class AdministrativeUnitSchema(RTModelSchema):
     class Meta(RTModelSchema.Meta):
@@ -169,6 +273,7 @@ class AuthorizationPolicySchema(RTModelSchema):
 user_schema = UserSchema()
 device_schema = DeviceSchema()
 group_schema = GroupSchema()
+group_schema_simple = GroupsSchema()
 application_schema = ApplicationSchema()
 td_schema = TenantDetailSchema()
 ds_schema = DirectorySettingSchema()
@@ -182,6 +287,11 @@ applications_schema = ApplicationsSchema(many=True)
 serviceprincipals_schema = ServicePrincipalsSchema(many=True)
 directoryroles_schema = DirectoryRolesSchema(many=True)
 administrativeunits_schema = AdministrativeUnitsSchema(many=True)
+pimgovernanceroleassignments_schema = PIMgovernanceRoleAssignmentsSchema(many=True)
+igaccesspackagepolicys_schema = IGaccessPackageAssignmentPolicysSchema(many=True)
+azroleassignments_schema = AZroleAssignmentsSchema(many=True)
+azeligibleroleassignments_schema = AZeligibleRoleAssignmentsSchema(many=True)
+pimresource_schema = PIMgovernanceResourceSchema()
 
 @app.route("/")
 def get_index():
@@ -190,7 +300,7 @@ def get_index():
 @app.errorhandler(404)
 def page_not_found(error):
     # Might be a valid angular page, serve that
-    if not '.' in request.path:
+    if not '.' in request.path and not request.path.startswith('/api/'):
         return send_file('dist_gui/index.html')
     return '404 - Page was not found', 404
 
@@ -204,6 +314,9 @@ def get_users():
     result = users_schema.dump(all_users)
     return jsonify(result)
 
+@app.route("/api/paged/users", methods=["GET"])
+def get_paged_users():
+    return query_all_items(request, users_schema, User, ["userPrincipalName", "displayName", "objectId"])
 
 @app.route("/api/users/<id>", methods=["GET"])
 def user_detail(id):
@@ -218,6 +331,9 @@ def get_devices():
     result = devices_schema.dump(all_devices)
     return jsonify(result)
 
+@app.route("/api/paged/devices", methods=["GET"])
+def get_paged_devices():
+    return query_all_items(request, devices_schema, Device, ["displayName", "objectId", "deviceId"])
 
 @app.route("/api/devices/<id>", methods=["GET"])
 def device_detail(id):
@@ -234,11 +350,221 @@ def user_groups(id):
     result = groups_schema.dump(user.memberOf)
     return jsonify(result)
 
+@app.route("/api/users/<id>/pimassignments", methods=["GET"])
+def user_pimassignments(id):
+    user = db.session.get(User, id)
+    if not user:
+        abort(404)
+    assignments = []
+    for group in user.memberOf:
+        assignments += group.pimRoleAssignments
+    result = pimgovernanceroleassignments_schema.dump(assignments)
+    return jsonify(result)
+
+@app.route("/api/users/<id>/accesspackages", methods=["GET"])
+def user_accesspackages(id):
+    user = db.session.get(User, id)
+    if not user:
+        abort(404)
+    packages = [] + user.accessPackagePolicies
+    for group in user.memberOf:
+        packages += group.accessPackagePolicies
+    if user.userType != 'Guest':
+        alluserpackages = db.session.query(IGaccessPackageAssignmentPolicy).where(IGaccessPackageAssignmentPolicy.allowedTargetScope.in_(['allDirectoryUsers','allMemberUsers'])).all()
+    else:
+        alluserpackages = db.session.query(IGaccessPackageAssignmentPolicy).where(IGaccessPackageAssignmentPolicy.allowedTargetScope.in_(['allDirectoryUsers','allExternalUsers'])).all()
+    packages += alluserpackages
+    result = igaccesspackagepolicys_schema.dump(packages)
+    return jsonify(result)
+
+def add_ra_recursive(group, roles, processedgroups):
+    roles += group.azRoleAssignments
+    if group.objectId not in processedgroups:
+        processedgroups.add(group.objectId)
+        for sgroup in group.memberOf:
+            add_ra_recursive(sgroup, roles, processedgroups)
+
+@app.route("/api/users/<id>/azroleassignments", methods=["GET"])
+def user_azroleassignments(id):
+    user = db.session.get(User, id)
+    if not user:
+        abort(404)
+    roles = [] + user.azRoleAssignments
+    processedgroups = set()
+    for group in user.memberOf:
+        add_ra_recursive(group, roles, processedgroups)
+
+    result = azroleassignments_schema.dump(roles)
+    return jsonify(result)
+
+def get_application(aid):
+    if isinstance(aid, list):
+        return db.session.query(ServicePrincipal).filter(ServicePrincipal.appId.in_(aid)).all()
+    else:
+        return db.session.query(ServicePrincipal).filter(ServicePrincipal.appId == aid).first()
+
+def parse_appcrit(crit):
+    ot = []
+    for ctype, clist in crit.items():
+        if ctype == 'Acrs':
+            ot.append({
+                'objectType':'SPECIAL',
+                'objectId': None,
+                'displayName': 'Action: ' +  ', '.join([action for action in clist])
+            })
+        elif ctype == 'NetworkAccess':
+            # clist should be a dict, for example {"TrafficProfiles":"Internet"}
+            ot.append({
+                'objectType':'SPECIAL',
+                'objectId': None,
+                'displayName': 'Network access: ' + ', '.join([f"{action}: {target}" for action, target in clist.items()])
+            })
+        else:
+            if 'All' in clist:
+                ot.append({
+                    'objectType':'SPECIAL',
+                    'objectId': None,
+                    'displayName': 'All resources'
+                })
+                break
+            if 'None' in clist:
+                ot.append({
+                    'objectType':'SPECIAL',
+                    'objectId': None,
+                    'displayName': 'No resources (policy never applies)'
+                })
+                break
+            if 'Office365' in clist:
+                ot.append({
+                    'objectType':'SPECIAL',
+                    'objectId': None,
+                    'displayName': 'All Office 365 applications'
+                })
+            if 'MicrosoftAdminPortals' in clist:
+                ot.append({
+                    'objectType':'SPECIAL',
+                    'objectId': None,
+                    'displayName': 'All Microsoft admin portals'
+                })
+            objects = get_application(clist)
+            if objects is not None:
+                if len(objects) > 0:
+                    if ctype == 'Applications':
+                        for app in objects:
+                            ot.append({
+                                'objectType':'ServicePrincipal',
+                                'objectId': app.objectId,
+                                'displayName': app.displayName
+                            })
+    return ot
+
+def parse_scope(cond):
+    if not 'Applications' in cond:
+        return
+    ucond = cond['Applications']
+    out = {'include':[],'exclude':[]}
+    for icrit in ucond['Include']:
+        out['include'] += parse_appcrit(icrit)
+    if 'Exclude' in ucond:
+        for icrit in ucond['Exclude']:
+            out['exclude'] += parse_appcrit(icrit)
+    return out
+
+def process_user_policies(alluser_policies, user):
+    policies = []
+    for policy in user.policiesIncluded:
+        detail = json.loads(policy.policyDetail[0])
+        if detail['State'] != 'Enabled' or policy in user.policiesExcluded:
+            continue
+        else:
+            policies.append({
+                'objectId': policy.objectId,
+                'policyDetail': detail,
+                'displayName': policy.displayName,
+                'policyScope': parse_scope(detail['Conditions'])
+            })
+    for policy in alluser_policies:
+        detail = json.loads(policy.policyDetail[0])
+        if detail['State'] != 'Enabled' or policy in user.policiesExcluded:
+            continue
+        else:
+            policies.append({
+                'objectId': policy.objectId,
+                'policyDetail': detail,
+                'displayName': policy.displayName,
+                'policyScope': parse_scope(detail['Conditions'])
+            })
+    return policies
+
+@app.route("/api/users/<id>/policies", methods=["GET"])
+def user_policies(id):
+    user = db.session.get(User, id)
+    if not user:
+        abort(404)
+
+    aup_ids = [record[0] for record in db.session.query(lnk_policy_user_include_allusers).all()]
+
+    alluser_policies = db.session.query(Policy).filter(Policy.objectId.in_(aup_ids)).all()
+    return jsonify(process_user_policies(alluser_policies, user))
+
+def parse_compressed_cidr(detail):
+    if not 'CompressedCidrIpRanges' in detail:
+        return ''
+    compressed = detail['CompressedCidrIpRanges']
+    b = base64.b64decode(compressed)
+    cstr = zlib.decompress(b, -zlib.MAX_WBITS)
+    decoded_cidrs = cstr.decode().split(",")
+    return decoded_cidrs
+
+@app.route("/api/policies/locations", methods=["GET"])
+def policies_locations():
+    locs = {}
+    for policy in db.session.query(Policy).filter(Policy.policyType == 6).order_by(Policy.displayName):
+        loc = {}
+        loc['displayName'] = policy.displayName
+        detail = None
+        oldpolicy = False
+
+        for pdetail in policy.policyDetail:
+            detaildata = json.loads(pdetail)
+            if 'KnownNetworkPolicies' in detaildata:
+                detail = detaildata['KnownNetworkPolicies']
+                oldpolicy = True
+
+        if not oldpolicy:
+            # New format
+            detail = json.loads(policy.policyDetail[0])
+            if not detail:
+                continue
+
+            loc['trusted'] = ("trusted" in detail.get("Categories","") if detail.get("Categories") else False)
+            loc['appliesToUnknownCountry'] = str(detail.get("ApplyToUnknownCountry")) if detail.get("ApplyToUnknownCountry") is not None else False
+            loc['ipRanges'] = parse_compressed_cidr(detail)
+            loc['categories'] = detail.get("Categories") if detail.get("Categories") is not None else ""
+            loc['countryCodes'] =  detail.get("CountryIsoCodes") if detail.get("CountryIsoCodes") else None
+            locs[policy.policyIdentifier] = loc
+        else:
+            # Old format
+            if not detail:
+                continue
+            loc['displayName'] = detail.get("NetworkName")
+            loc['trusted'] = ("trusted" in detail.get("Categories","") if detail.get("Categories") else False)
+            loc['appliesToUnknownCountry'] = str(detail.get("ApplyToUnknownCountry")) if detail.get("ApplyToUnknownCountry") is not None else False
+            loc['ipRanges'] = detail.get('CidrIpRanges') if detail.get("CidrIpRanges") else ""
+            loc['categories'] = detail.get("Categories") if detail.get("Categories") is not None else ""
+            loc['countryCodes'] =  detail.get("CountryIsoCodes") if detail.get("CountryIsoCodes") else None
+            locs[detail.get("NetworkId")] = loc
+    return jsonify(locs)
+
 @app.route("/api/groups", methods=["GET"])
 def get_groups():
     all_groups = db.session.query(Group).all()
     result = groups_schema.dump(all_groups)
     return jsonify(result)
+
+@app.route("/api/paged/groups", methods=["GET"])
+def get_paged_groups():
+    return query_all_items(request, groups_schema, Group, ["displayName", "objectId"])
 
 @app.route("/api/groups/<id>", methods=["GET"])
 def group_detail(id):
@@ -246,6 +572,32 @@ def group_detail(id):
     if not group:
         abort(404)
     return group_schema.jsonify(group)
+
+@app.route("/api/groups/<id>/pimresource", methods=["GET"])
+def group_pimresource(id):
+    group = db.session.get(Group, id)
+    if not group or not group.pimResource:
+        abort(404)
+    return pimresource_schema.jsonify(group.pimResource[0])
+
+@app.route("/api/groups/<id>/azroleassignments", methods=["GET"])
+def group_azroleassignments(id):
+    group = db.session.get(Group, id)
+    if not group:
+        abort(404)
+    roles = []
+    processedgroups = set()
+    add_ra_recursive(group, roles, processedgroups)
+
+    result = azroleassignments_schema.dump(roles)
+    return jsonify(result)
+
+@app.route("/api/groupresolve/<id>", methods=["GET"])
+def group_detail_simple(id):
+    group = db.session.get(Group, id)
+    if not group:
+        abort(404)
+    return group_schema_simple.jsonify(group)
 
 @app.route("/api/administrativeunits", methods=["GET"])
 def get_administrativeunits():
@@ -272,12 +624,32 @@ def sp_detail(id):
         abort(404)
     return serviceprincipal_schema.jsonify(sp)
 
+@app.route("/api/serviceprincipals/<id>/azroleassignments", methods=["GET"])
+def serviceprincipals_azroleassignments(id):
+    serviceprincipals = db.session.get(ServicePrincipal, id)
+    if not serviceprincipals:
+        abort(404)
+    roles = [] + serviceprincipals.azRoleAssignments
+    processedgroups = set()
+    for group in serviceprincipals.memberOf:
+        add_ra_recursive(group, roles, processedgroups)
+
+    result = azroleassignments_schema.dump(roles)
+    return jsonify(result)
+
 @app.route("/api/serviceprincipals-by-appid/<id>", methods=["GET"])
 def sp_detail_by_appid(id):
     sp = db.session.query(ServicePrincipal).filter(ServicePrincipal.appId == id).first()
     if not sp:
         abort(404)
     return serviceprincipal_schema.jsonify(sp)
+
+@app.route("/api/applications-by-appid/<id>", methods=["GET"])
+def app_detail_by_appid(id):
+    sp = db.session.query(Application).filter(Application.appId == id).first()
+    if not sp:
+        abort(404)
+    return application_schema.jsonify(sp)
 
 @app.route("/api/applications", methods=["GET"])
 def get_applications():
@@ -608,6 +980,48 @@ def get_stats():
         'countAdministrativeUnits': db.session.query(func.count(AdministrativeUnit.objectId)).scalar(),
     }
     return jsonify(stats)
+
+# Wrapper that supports paging based on the work of Kevin Tellier (@flashlam)
+def query_all_items(request, schema, model, searchfields):
+    page = request.args.get('page', type=int)
+    rows = request.args.get('limit', type=int)
+    search = request.args.get('search', type=str)
+    sort_column = request.args.get('sortColumn', type=str)
+    sort_order = request.args.get('sortDirection', type=str)
+
+    query = db.session.query(model)
+
+    if search and search != 'undefined':
+        # For now only search on the userPrincipalName and displayName fields, others will be added with advanced filtering
+        #filter = build_dynamic_filter(user_schema, search)
+        filters = []
+        for field in searchfields:
+            filters.append(getattr(model,field).like(f'%{search}%'))
+
+        query = query.filter(or_(*filters))
+
+    if sort_column and sort_column != 'undefined':
+        field = getattr(model, sort_column)
+        if hasattr(field, 'type') and isinstance(field.type, JSON):
+            # For JSON fields, use the length of the JSON array for sorting
+            field = func.json_array_length(cast(field, db.Text))
+        elif hasattr(field, 'property') and hasattr(field.property, 'direction'):
+            # Handle relationship fields
+            field = field.property.direction.mapper.class_.id
+        if sort_order and sort_order.lower() == 'desc':
+            query = query.order_by(collate(field, "NOCASE").desc())
+        else:
+            query = query.order_by(collate(field, "NOCASE").asc())
+
+    if page is None and rows is None:
+        all_items = query.all()
+    else:
+        all_items = query.paginate(page=page, per_page=rows)
+    result = {
+        'items': schema.dump(all_items),
+        'count': all_items.total
+    }
+    return jsonify(result)
 
 def create_app_test():
     '''

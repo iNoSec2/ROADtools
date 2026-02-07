@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment'
 import {
   Router, Resolve,
@@ -29,6 +29,7 @@ export interface GroupsItem {
   memberOfRole: DirectoryRolesItem[];
   ownerUsers: UsersItem[];
   ownerServicePrincipals: ServicePrincipalsItem[];
+  pimRoleAssignments: PIMRoleAssignment[];
 }
 
 export interface AdministrativeUnitsItem {
@@ -110,6 +111,7 @@ export interface UsersItem {
   strongAuthenticationDetail: object;
   userType: string;
   searchableDeviceKey: object;
+  pimRoleAssignments: PIMRoleAssignment[];
 }
 
 export interface appMetadata {
@@ -176,6 +178,37 @@ export interface TenantDetail {
 
 }
 
+export interface PolicyScopeItem {
+  objectId: string;
+  objectType: string;
+  displayName: string;
+}
+
+export interface PolicyScope {
+  include: PolicyScopeItem[];
+  exclude: PolicyScopeItem[];
+}
+
+export interface PolicyItem {
+  objectId: string;
+  displayName: string;
+  policyDetail: object;
+  policyScope: PolicyScope;
+}
+
+export interface NetworkLocationItem {
+  displayName: string;
+  trusted: boolean;
+  appliesToUnknownCountry: boolean;
+  ipRanges: string[];
+  categories: string[];
+  countryCodes: string[]
+}
+
+export interface NetworkLocationList {
+  [s: string]: NetworkLocationItem;
+}
+
 export interface DirectorySetting {
   displayName: string;
   id: string;
@@ -228,24 +261,262 @@ export interface DevicesItem {
 }
 
 export interface AuthorizationPolicy {
-    id: string;
-    allowInvitesFrom: string;
-    allowedToSignUpEmailBasedSubscriptions: boolean;
-    allowedToUseSSPR: boolean;
-    allowEmailVerifiedUsersToJoinOrganization: boolean;
-    blockMsolPowerShell: boolean;
-    defaultUserRolePermissions: object;
-    displayName: string;
-    description: string;
-    enabledPreviewFeatures: object;
-    guestUserRoleId: string;
-    permissionGrantPolicyIdsAssignedToDefaultUserRole: string[];
+  id: string;
+  allowInvitesFrom: string;
+  allowedToSignUpEmailBasedSubscriptions: boolean;
+  allowedToUseSSPR: boolean;
+  allowEmailVerifiedUsersToJoinOrganization: boolean;
+  blockMsolPowerShell: boolean;
+  defaultUserRolePermissions: object;
+  displayName: string;
+  description: string;
+  enabledPreviewFeatures: object;
+  guestUserRoleId: string;
+  permissionGrantPolicyIdsAssignedToDefaultUserRole: string[];
+}
+
+export interface UsersList {
+  items: UsersItem[];
+  count: number;
+}
+
+export interface GroupsList {
+  items: GroupsItem[];
+  count: number;
+}
+
+export interface DevicesList {
+  items: DevicesItem[];
+  count: number;
+}
+
+// Pagination interface as contributed by Richard Gomez (rgmz)
+export interface PaginationParams {
+  page: number;
+  pageSize: number;
+  sortColumn?: string;
+  sortDirection?: string;
+  search?: string;
+}
+
+/*
+  PIM interfaces
+*/
+export interface PIMLifeCycleRule {
+  ruleIdentifier: string;
+  setting: string; // JSON string containing rule-specific settings
+}
+
+export interface PIMLifeCycleManagement {
+  caller: 'Admin' | 'EndUser';
+  level: 'Eligible' | 'Member';
+  operation: string;
+  value: PIMLifeCycleRule[];
+}
+
+export interface PIMRoleSettingsV2 {
+  id: string;
+  isDefault: boolean;
+  lastUpdatedBy: string | null;
+  lastUpdatedDateTime: string | null;
+  lifeCycleManagement: PIMLifeCycleManagement[];
+}
+
+export interface PIMRoleDefinition {
+  displayName: string;
+  externalId: string;
+  id: string;
+  templateId: string;
+  type: string | null;
+  roleSettingsv2?: PIMRoleSettingsV2[];
+  roleAssignments?: PIMRoleAssignment[];
+}
+
+export interface PIMResource {
+  displayName: string;
+  externalId: string;
+  id: string;
+  managedAt: string | null;
+  onboardDateTime: string | null;
+  originTenantId: string | null;
+  registeredDateTime: string | null;
+  registeredRoot: string | null;
+  status: string;
+  type: string; // 'Directory', 'Security', etc.
+  roleDefinitions?: PIMRoleDefinition[];
+  roleSettingsv2?: PIMRoleSettingsV2[];
+  roleAssignments?: PIMRoleAssignment[];
+}
+
+export interface PIMRoleAssignment {
+  assignmentState: 'Eligible' | 'Active';
+  condition: string | null;
+  conditionDescription: string | null;
+  conditionVersion: string | null;
+  endDateTime: string | null;
+  externalId: string;
+  id: string;
+  isPermanent: boolean;
+  linkedEligibleRoleAssignmentId: string | null;
+  memberType: string;
+  resource: PIMResource;
+  resourceId: string;
+  roleDefinition?: PIMRoleDefinition;
+  roleDefinitionId: string;
+  scopedResourceId: string | null;
+  startDateTime: string | null;
+  status: string;
+  subjectGroup: any[];
+  subjectId: string;
+  subjectServicePrincipal: any[];
+  subjectUser: string[];
+}
+
+/*
+  Identity Governance interfaces
+*/
+export interface AccessPackageResourceRole {
+  description: string | null;
+  displayName: string;
+  id: string;
+  originId: string;
+  originSystem: string;
+  roleType: string | null;
+}
+
+export interface AccessPackageResourceScope {
+  description: string;
+  displayName: string;
+  id: string;
+  isRootScope: boolean;
+  originId: string;
+  originSystem: string;
+  roleOriginId: string | null;
+  url: string | null;
+}
+
+export interface AccessPackageResourceRoleScope {
+  createdBy: string;
+  createdByString: string;
+  createdDateTime: string;
+  id: string;
+  modifiedBy: string;
+  modifiedDateTime: string;
+  role: AccessPackageResourceRole[];
+  scope: AccessPackageResourceScope[];
+}
+
+export interface AccessPackageDetails {
+  catalogId: string;
+  createdBy: string;
+  createdByString: string;
+  createdDateTime: string;
+  description: string;
+  displayName: string;
+  id: string;
+  isHidden: boolean;
+  isRoleScopesVisible: boolean;
+  lastModifiedByString: string;
+  lastModifiedDateTime: string;
+  modifiedBy: string;
+  modifiedDateTime: string;
+  resourceRoleScopes: AccessPackageResourceRoleScope[];
+}
+
+export interface AccessPackageApprovalStage {
+  approvalStageTimeOutInDays?: number;
+  approverInformationVisibility?: string;
+  durationBeforeAutomaticDenial?: string;
+  durationBeforeEscalation?: string;
+  isApproverJustificationRequired: boolean;
+  isEscalationEnabled: boolean;
+  primaryApprovers: any[];
+  fallbackPrimaryApprovers: any[];
+  escalationApprovers: any[];
+  fallbackEscalationApprovers: any[];
+}
+
+export interface AccessPackageApprovalSettings {
+  isApprovalRequiredForAdd?: boolean;
+  isApprovalRequired?: boolean;
+  isApprovalRequiredForUpdate: boolean;
+  isRequestorJustificationRequired: boolean;
+  approvalMode?: string;
+  stages?: AccessPackageApprovalStage[];
+  approvalStages?: AccessPackageApprovalStage[];
+}
+
+export interface AccessPackagePolicy {
+  accessPackage: AccessPackageDetails;
+  approvalSettings?: AccessPackageApprovalSettings;
+  requestApprovalSettings?: AccessPackageApprovalSettings;
+  allowedTargetScope: string;
+  canExtend: boolean;
+  createdDateTime: string;
+  description: string;
+  displayName: string;
+  durationInDays: number;
+  expiration: {
+    duration: string;
+    endDateTime: string | null;
+    type: string;
+  };
+  id: string;
+  modifiedDateTime: string;
+  policyAssignmentType: string;
+}
+
+/*
+  Azure related interfaces
+*/
+
+export interface AzureRolePermission {
+  actions: string[];
+  notActions: string[];
+}
+
+export interface AzureRoleDefinition {
+  created_on: string;
+  description: string;
+  id: string;
+  name: string;
+  permissions: AzureRolePermission[];
+  role_name: string;
+  role_type: string;
+  type: string;
+}
+
+export interface AzureRoleAssignment {
+  condition: string | null;
+  condition_version: string | null;
+  created_on: string;
+  delegated_managed_identity_resource_id: string | null;
+  description: string | null;
+  id: string;
+  name: string;
+  principal_id: string;
+  principal_type: string;
+  role: AzureRoleDefinition;
+  scope: string;
+  type: string;
+}
+
+export interface AzureScopeInfo {
+  type: 'Root' | 'ManagementGroup' | 'Subscription' | 'ResourceGroup' | 'Resource';
+  displayName: string;
+  subscriptionId?: string;
+  resourceGroup?: string;
+  resourceProvider?: string;
+  resourceType?: string;
+  resourceName?: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class DatabaseService {
+  defaultPage = 1;
+  defaultPageSize = 50;
 
   constructor(private http: HttpClient) { }
 
@@ -253,12 +524,44 @@ export class DatabaseService {
       return this.http.get<UsersItem[]>(environment.apibase + 'users');
   }
 
+  public getUsersPaged(pagination?: PaginationParams):  Observable<UsersList> {
+      return this.http.get<UsersList>(environment.apibase + 'paged/users',
+        { params: this.toHttpParams(pagination) }
+      );
+  }
+
   public getUser(id):  Observable<UsersItem> {
       return this.http.get<UsersItem>(environment.apibase + 'users/'+ id);
   }
 
+  public getUserPolicies(id):  Observable<PolicyItem[]> {
+      return this.http.get<PolicyItem[]>(environment.apibase + 'users/'+ id+'/policies');
+  }
+
+  public getUserPIMassignments(id):  Observable<PIMRoleAssignment[]> {
+      return this.http.get<PIMRoleAssignment[]>(environment.apibase + 'users/'+ id +'/pimassignments');
+  }
+
+  public getUserAccessPackages(id):  Observable<AccessPackagePolicy[]> {
+      return this.http.get<AccessPackagePolicy[]>(environment.apibase + 'users/'+ id +'/accesspackages');
+  }
+
+  public getUserAzureRoleAssignments(id):  Observable<AzureRoleAssignment[]> {
+      return this.http.get<AzureRoleAssignment[]>(environment.apibase + 'users/'+ id +'/azroleassignments');
+  }
+
+  public getNetworkLocations():  Observable<NetworkLocationList> {
+      return this.http.get<NetworkLocationList>(environment.apibase + 'policies/locations');
+  }
+
   public getDevices():  Observable<DevicesItem[]> {
       return this.http.get<DevicesItem[]>(environment.apibase + 'devices');
+  }
+
+  public getDevicesPaged(pagination?: PaginationParams):  Observable<DevicesList> {
+      return this.http.get<DevicesList>(environment.apibase + 'paged/devices',
+        { params: this.toHttpParams(pagination) }
+      );
   }
 
   public getDevice(id):  Observable<DevicesItem> {
@@ -269,8 +572,26 @@ export class DatabaseService {
       return this.http.get<GroupsItem[]>(environment.apibase + 'groups');
   }
 
+  public getGroupsPaged(pagination?: PaginationParams):  Observable<GroupsList> {
+      return this.http.get<GroupsList>(environment.apibase + 'paged/groups',
+        { params: this.toHttpParams(pagination) }
+      );
+  }
+
   public getGroup(id):  Observable<GroupsItem> {
       return this.http.get<GroupsItem>(environment.apibase + 'groups/'+ id);
+  }
+
+  public getGroupPIMResource(id):  Observable<PIMResource> {
+      return this.http.get<PIMResource>(environment.apibase + 'groups/'+ id+'/pimresource');
+  }
+
+  public getGroupAzureRoleAssignments(id):  Observable<AzureRoleAssignment[]> {
+      return this.http.get<AzureRoleAssignment[]>(environment.apibase + 'groups/'+ id +'/azroleassignments');
+  }
+
+  public getGroupResolve(id):  Observable<GroupsItem> {
+      return this.http.get<GroupsItem>(environment.apibase + 'groupresolve/'+ id);
   }
 
   public getAdministrativeUnits():  Observable<AdministrativeUnitsItem[]> {
@@ -289,8 +610,16 @@ export class DatabaseService {
       return this.http.get<ServicePrincipalsItem>(environment.apibase + 'serviceprincipals/'+ id);
   }
 
+  public getServicePrincipalAzureRoleAssignments(id):  Observable<AzureRoleAssignment[]> {
+      return this.http.get<AzureRoleAssignment[]>(environment.apibase + 'serviceprincipals/'+ id +'/azroleassignments');
+  }
+
   public getServicePrincipalByAppId(id):  Observable<ServicePrincipalsItem> {
       return this.http.get<ServicePrincipalsItem>(environment.apibase + 'serviceprincipals-by-appid/'+ id);
+  }
+
+  public getApplicationByAppId(id):  Observable<ApplicationsItem> {
+      return this.http.get<ApplicationsItem>(environment.apibase + 'applications-by-appid/'+ id);
   }
 
   public getApplications():  Observable<ApplicationsItem[]> {
@@ -316,7 +645,7 @@ export class DatabaseService {
   public getTenantDetail():  Observable<TenantDetail> {
       return this.http.get<TenantDetail>(environment.apibase + 'tenantdetails');
   }
-  
+
   public getDirectorySetting():  Observable<DirectorySetting> {
       return this.http.get<DirectorySetting>(environment.apibase + 'directorysettings');
   }
@@ -343,6 +672,23 @@ export class DatabaseService {
 
   public getOAuth2Permissions():  Observable<OAuth2PermissionsItem[]> {
       return this.http.get<OAuth2PermissionsItem[]>(environment.apibase + 'oauth2permissions');
+  }
+
+  // Pagination parsing as contributed by Richard Gomez (rgmz)
+  private toHttpParams(params?: PaginationParams): HttpParams {
+    let httpParams = new HttpParams();
+    httpParams = httpParams.set('page', params?.page || this.defaultPage);
+    httpParams = httpParams.set('limit', params?.pageSize || this.defaultPageSize);
+    if (params?.sortColumn) {
+      httpParams = httpParams.set('sortColumn', params.sortColumn);
+    }
+    if (params?.sortDirection) {
+      httpParams = httpParams.set('sortDirection', params.sortDirection);
+    }
+    if (params?.search) {
+      httpParams = httpParams.set('search', params.search);
+    }
+    return httpParams;
   }
 }
 
@@ -494,6 +840,29 @@ export class ServicePrincipalsByAppIdResolveService implements Resolve<ServicePr
           return EMPTY;
         } else { // id not found
           this.router.navigate(['/serviceprincipals']);
+          return EMPTY;
+        }
+      })
+    );
+  }
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class ApplicationsByAppIdResolveService implements Resolve<ApplicationsItem> {
+  constructor(private dbservice: DatabaseService, private router: Router) {}
+
+  resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<ApplicationsItem> | Observable<never> {
+    let id = route.paramMap.get('id');
+
+    return this.dbservice.getApplicationByAppId(id).pipe(
+      mergeMap(application => {
+        if (application) {
+          this.router.navigate(['/applications', application.objectId]);
+          return EMPTY;
+        } else { // id not found
+          this.router.navigate(['/applications']);
           return EMPTY;
         }
       })

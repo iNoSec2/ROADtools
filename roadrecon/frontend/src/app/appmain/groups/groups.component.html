@@ -50,6 +50,6 @@
     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
     <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
   </table>
-  <mat-paginator [pageSizeOptions]="[50, 100, 500, 1000, 5000]"></mat-paginator>
+  <mat-paginator [length]="totalRecords" [pageIndex]="pageIndex" (page)="onPageChange($event)" [pageSizeOptions]="[50, 100, 500, 1000, 5000]"></mat-paginator>
 </div>
 <router-outlet></router-outlet>

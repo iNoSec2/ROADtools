@@ -211,6 +211,314 @@
       </table>
     </mat-expansion-panel>
   </mat-tab>
+
+  <mat-tab label="PIM Roles" *ngIf="pimGroupDetails">
+    <div class="pim-info-banner" *ngIf="pimGroupDetails">
+      <mat-icon>verified_user</mat-icon>
+      <span>This group is PIM-enabled since {{formatDateTime(pimGroupDetails.onboardDateTime)}}</span>
+    </div>
+
+    <!-- Member Role -->
+    <mat-expansion-panel expanded *ngIf="getRoleDefinition('Member')">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <div class="role-header">
+            <span class="role-name">Eligible Members ({{getEligibleAssignments(getRoleDefinition('Member')).length}})</span>
+            <span class="approval-badge" *ngIf="requiresGroupRoleApproval(getRoleDefinition('Member'))">
+              Approval Required
+            </span>
+            <span class="approval-badge no-approval" *ngIf="!requiresGroupRoleApproval(getRoleDefinition('Member'))">
+              No Approval
+            </span>
+          </div>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <table class="full-width-table" *ngIf="getEligibleAssignments(getRoleDefinition('Member')).length > 0" mat-table [dataSource]="getEligibleAssignments(getRoleDefinition('Member'))">
+        <ng-container matColumnDef="subject">
+          <th mat-header-cell *matHeaderCellDef>Subject</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="subject-info">
+              <a *ngIf="getAssignmentSubject(row)?.type === 'User'"
+                 class="subject-link"
+                 [routerLink]="['/users', getAssignmentSubject(row)?.subject?.objectId]">
+                {{formatSubjectDisplay(getAssignmentSubject(row)?.subject, getAssignmentSubject(row)?.type)}}
+              </a>
+              <a *ngIf="getAssignmentSubject(row)?.type === 'Group'"
+                 class="subject-link"
+                 [routerLink]="['/groups', getAssignmentSubject(row)?.subject?.objectId]">
+                {{formatSubjectDisplay(getAssignmentSubject(row)?.subject, getAssignmentSubject(row)?.type)}}
+              </a>
+              <a *ngIf="getAssignmentSubject(row)?.type === 'ServicePrincipal'"
+                 class="subject-link"
+                 [routerLink]="['/serviceprincipals', getAssignmentSubject(row)?.subject?.objectId]">
+                {{formatSubjectDisplay(getAssignmentSubject(row)?.subject, getAssignmentSubject(row)?.type)}}
+              </a>
+              <div class="subject-type">{{getAssignmentSubject(row)?.type}}</div>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="duration">
+          <th mat-header-cell *matHeaderCellDef>Duration</th>
+          <td mat-cell *matCellDef="let row">
+            <div *ngIf="row.isPermanent">Permanent</div>
+            <div *ngIf="!row.isPermanent">
+              <div *ngIf="row.startDateTime">From: {{formatDateTime(row.startDateTime)}}</div>
+              <div *ngIf="row.endDateTime">To: {{formatDateTime(row.endDateTime)}}</div>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="status-badge" [class.provisioned]="row.status === 'Provisioned'">
+              {{row.status}}
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="pimMemberColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: pimMemberColumns;"></tr>
+      </table>
+
+      <div *ngIf="getEligibleAssignments(getRoleDefinition('Member')).length === 0" class="no-data">
+        <mat-icon>inbox</mat-icon>
+        <p>No eligible member assignments</p>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Owner Role -->
+    <mat-expansion-panel *ngIf="getRoleDefinition('Owner')">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <div class="role-header">
+            <span class="role-name">Eligible Owners ({{getEligibleAssignments(getRoleDefinition('Owner')).length}})</span>
+            <span class="approval-badge" *ngIf="requiresGroupRoleApproval(getRoleDefinition('Owner'))">
+              Approval Required
+            </span>
+            <span class="approval-badge no-approval" *ngIf="!requiresGroupRoleApproval(getRoleDefinition('Owner'))">
+              No Approval
+            </span>
+          </div>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <table class="full-width-table" *ngIf="getEligibleAssignments(getRoleDefinition('Owner')).length > 0" mat-table [dataSource]="getEligibleAssignments(getRoleDefinition('Owner'))">
+        <ng-container matColumnDef="subject">
+          <th mat-header-cell *matHeaderCellDef>Subject</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="subject-info">
+              <a *ngIf="getAssignmentSubject(row)?.type === 'User'"
+                 class="subject-link"
+                 [routerLink]="['/users', getAssignmentSubject(row)?.subject?.objectId]">
+                {{formatSubjectDisplay(getAssignmentSubject(row)?.subject, getAssignmentSubject(row)?.type)}}
+              </a>
+              <a *ngIf="getAssignmentSubject(row)?.type === 'Group'"
+                 class="subject-link"
+                 [routerLink]="['/groups', getAssignmentSubject(row)?.subject?.objectId]">
+                {{formatSubjectDisplay(getAssignmentSubject(row)?.subject, getAssignmentSubject(row)?.type)}}
+              </a>
+              <a *ngIf="getAssignmentSubject(row)?.type === 'ServicePrincipal'"
+                 class="subject-link"
+                 [routerLink]="['/serviceprincipals', getAssignmentSubject(row)?.subject?.objectId]">
+                {{formatSubjectDisplay(getAssignmentSubject(row)?.subject, getAssignmentSubject(row)?.type)}}
+              </a>
+              <div class="subject-type">{{getAssignmentSubject(row)?.type}}</div>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="duration">
+          <th mat-header-cell *matHeaderCellDef>Duration</th>
+          <td mat-cell *matCellDef="let row">
+            <div *ngIf="row.isPermanent">Permanent</div>
+            <div *ngIf="!row.isPermanent">
+              <div *ngIf="row.startDateTime">From: {{formatDateTime(row.startDateTime)}}</div>
+              <div *ngIf="row.endDateTime">To: {{formatDateTime(row.endDateTime)}}</div>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="status-badge" [class.provisioned]="row.status === 'Provisioned'">
+              {{row.status}}
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="pimOwnerColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: pimOwnerColumns;"></tr>
+      </table>
+
+      <div *ngIf="getEligibleAssignments(getRoleDefinition('Owner')).length === 0" class="no-data">
+        <mat-icon>inbox</mat-icon>
+        <p>No eligible owner assignments</p>
+      </div>
+    </mat-expansion-panel>
+
+    <div *ngIf="!pimGroupDetails.roleDefinitions || pimGroupDetails.roleDefinitions.length === 0" class="no-data">
+      <mat-icon>info</mat-icon>
+      <p>No PIM role definitions found for this group</p>
+    </div>
+  </mat-tab>
+
+     <mat-tab label="PIM rights" *ngIf="group.pimRoleAssignments.length > 0">
+<mat-panel-title *ngIf="group.pimRoleAssignments && group.pimRoleAssignments.length > 0"  class="pagedescription">
+          Direct PIM assignments
+        </mat-panel-title>
+  <table *ngIf="group.pimRoleAssignments && group.pimRoleAssignments.length > 0" class="full-width-table" mat-table [dataSource]="group.pimRoleAssignments">
+    <ng-container matColumnDef="resourceType">
+      <th mat-header-cell *matHeaderCellDef>Type</th>
+      <td mat-cell *matCellDef="let row">
+        <span *ngIf="row.resource.type === 'Directory'">Directory Role</span>
+        <span *ngIf="row.resource.type === 'Security'">Group</span>
+        <span *ngIf="row.resource.type !== 'Directory' && row.resource.type !== 'Security'">{{row.resource.type}}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="resourceAndRole">
+      <th mat-header-cell *matHeaderCellDef>Resource / Role</th>
+      <td mat-cell *matCellDef="let row">
+        <div *ngIf="row.resource.type === 'Directory'">
+          <strong>{{row.roleDefinition.displayName}}</strong>
+        </div>
+        <div *ngIf="row.resource.type === 'Security'">
+          <strong><a [routerLink]="['/groups/', row.resource.id]">{{row.resource.displayName}}</a></strong>
+          <div class="role-detail">{{row.roleDefinition.displayName}}</div>
+        </div>
+        <div *ngIf="row.resource.type !== 'Directory' && row.resource.type !== 'Security'">
+          <strong>{{row.resource.displayName}}</strong>
+          <div class="role-detail">{{row.roleDefinition.displayName}}</div>
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="assignmentState">
+      <th mat-header-cell *matHeaderCellDef>State</th>
+      <td mat-cell *matCellDef="let row">
+        <span [class.eligible-badge]="row.assignmentState === 'Eligible'"
+              [class.active-badge]="row.assignmentState === 'Active'">
+          {{row.assignmentState}}
+        </span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="approval">
+      <th mat-header-cell *matHeaderCellDef>Approval</th>
+      <td mat-cell *matCellDef="let row">
+        <span *ngIf="utils.requiresApproval(row.roleDefinition) === true" class="approval-required">Required</span>
+        <span *ngIf="utils.requiresApproval(row.roleDefinition) === false" class="approval-not-required">Not required</span>
+        <span *ngIf="utils.requiresApproval(row.roleDefinition) === null">-</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="memberType">
+      <th mat-header-cell *matHeaderCellDef>Member Type</th>
+      <td mat-cell *matCellDef="let row">{{row.memberType}}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="duration">
+      <th mat-header-cell *matHeaderCellDef>Duration</th>
+      <td mat-cell *matCellDef="let row">
+        <div *ngIf="row.isPermanent">Permanent</div>
+        <div *ngIf="!row.isPermanent">
+          <div *ngIf="row.startDateTime">From: {{row.startDateTime}}</div>
+          <div *ngIf="row.endDateTime">To: {{row.endDateTime}}</div>
+          <div *ngIf="!row.startDateTime && !row.endDateTime">Not specified</div>
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let row">{{row.status}}</td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumnsPim"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumnsPim;"></tr>
+  </table>
+</mat-tab>
+
+<mat-tab label="Azure Roles" *ngIf="azureRoleAssignments && azureRoleAssignments.length > 0">
+  <mat-expansion-panel expanded>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        Azure Role Assignments ({{ azureRoleAssignments?.length || 0 }})
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <table class="full-width-table" *ngIf="azureRoleAssignments && azureRoleAssignments.length > 0" mat-table [dataSource]="azureRoleAssignments">
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef>Role</th>
+        <td mat-cell *matCellDef="let row">
+          <div class="role-info">
+            <strong>{{row.role?.role_name}}</strong>
+            <div class="role-type-badge" [class.builtin]="row.role.role_type === 'BuiltInRole'"
+                 [class.custom]="row.role.role_type === 'CustomRole'">
+              {{row.role.role_type === 'BuiltInRole' ? 'Built-in' : 'Custom'}}
+            </div>
+            <div class="role-description" *ngIf="row.role.description">
+              {{row.role.description}}
+            </div>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="scopeType">
+        <th mat-header-cell *matHeaderCellDef>Scope Type</th>
+        <td mat-cell *matCellDef="let row">
+          <div class="scope-type" [ngClass]="utils.getScopeClass(utils.parseAzureScope(row.scope))">
+            <mat-icon class="scope-icon">{{utils.getScopeIcon(utils.parseAzureScope(row.scope))}}</mat-icon>
+            <span>{{utils.parseAzureScope(row.scope).type}}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="scopeDetails">
+        <th mat-header-cell *matHeaderCellDef>Scope Details</th>
+        <td mat-cell *matCellDef="let row">
+          <div class="scope-details">
+            <div class="scope-name">{{utils.parseAzureScope(row.scope).displayName}}</div>
+            <div class="scope-hierarchy" *ngIf="utils.parseAzureScope(row.scope).subscriptionId">
+              <div *ngIf="utils.parseAzureScope(row.scope).subscriptionId" class="hierarchy-item">
+                <mat-icon class="hierarchy-icon">key</mat-icon>
+                <span class="hierarchy-label">Subscription:</span>
+                <span class="hierarchy-value">{{utils.parseAzureScope(row.scope).subscriptionId}}</span>
+              </div>
+              <div *ngIf="utils.parseAzureScope(row.scope).resourceGroup" class="hierarchy-item">
+                <mat-icon class="hierarchy-icon">folder</mat-icon>
+                <span class="hierarchy-label">Resource Group:</span>
+                <span class="hierarchy-value">{{utils.parseAzureScope(row.scope).resourceGroup}}</span>
+              </div>
+              <div *ngIf="utils.parseAzureScope(row.scope).resourceProvider" class="hierarchy-item">
+                <mat-icon class="hierarchy-icon">category</mat-icon>
+                <span class="hierarchy-label">Provider:</span>
+                <span class="hierarchy-value">{{utils.parseAzureScope(row.scope).resourceProvider}}</span>
+              </div>
+            </div>
+            <div class="scope-condition" *ngIf="row.condition">
+              <mat-icon class="condition-icon">rule</mat-icon>
+              <span class="condition-label">Conditional assignment</span>
+            </div>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumnsAzureRole"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumnsAzureRole;"></tr>
+    </table>
+
+    <div *ngIf="!azureRoleAssignments || azureRoleAssignments.length === 0" class="no-data">
+      <mat-icon>inbox</mat-icon>
+      <p>No Azure role assignments</p>
+    </div>
+  </mat-expansion-panel>
+</mat-tab>
+
   <mat-tab label="Raw"><p appJsonFormat [json]="group"></p></mat-tab>
 </mat-tab-group>
 </mat-dialog-content>

@@ -9,6 +9,7 @@
         <tr><th>AppId</th><td>{{ sp.appId }}</td></tr>
         <tr><th>Publisher</th><td>{{ sp.publisherName }}</td></tr>
         <tr><th>Status</th><td>{{ sp.accountEnabled? 'Enabled':'Disabled' }}</td></tr>
+        <tr *ngIf="tenantdetails && tenantdetails.objectId && tenantdetails.objectId == sp.appOwnerTenantId"><th>Application</th><td><a [routerLink]="['/applications-by-appid/', sp.appId]">{{ sp.displayName }}</a></td></tr>
         <tr><th>Assignment required</th><td>{{ sp.appRoleAssignmentRequired? 'Yes':'No' }}</td></tr>
         <tr><th>Reply Urls</th><td>
           <mat-list>
@@ -213,6 +214,82 @@
       <tr mat-header-row *matHeaderRowDef="displayedColumnsOAuth2"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumnsOAuth2;"></tr>
     </table>
+  </mat-tab>
+
+  <mat-tab label="Azure Roles" *ngIf="azureRoleAssignments && azureRoleAssignments.length > 0">
+    <mat-expansion-panel expanded>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          Azure Role Assignments ({{ azureRoleAssignments?.length || 0 }})
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <table class="full-width-table" *ngIf="azureRoleAssignments && azureRoleAssignments.length > 0" mat-table [dataSource]="azureRoleAssignments">
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>Role</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="role-info">
+              <strong>{{row.role?.role_name}}</strong>
+              <div class="role-type-badge" [class.builtin]="row.role.role_type === 'BuiltInRole'"
+                   [class.custom]="row.role.role_type === 'CustomRole'">
+                {{row.role.role_type === 'BuiltInRole' ? 'Built-in' : 'Custom'}}
+              </div>
+              <div class="role-description" *ngIf="row.role.description">
+                {{row.role.description}}
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="scopeType">
+          <th mat-header-cell *matHeaderCellDef>Scope Type</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="scope-type" [ngClass]="utils.getScopeClass(utils.parseAzureScope(row.scope))">
+              <mat-icon class="scope-icon">{{utils.getScopeIcon(utils.parseAzureScope(row.scope))}}</mat-icon>
+              <span>{{utils.parseAzureScope(row.scope).type}}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="scopeDetails">
+          <th mat-header-cell *matHeaderCellDef>Scope Details</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="scope-details">
+              <div class="scope-name">{{utils.parseAzureScope(row.scope).displayName}}</div>
+              <div class="scope-hierarchy" *ngIf="utils.parseAzureScope(row.scope).subscriptionId">
+                <div *ngIf="utils.parseAzureScope(row.scope).subscriptionId" class="hierarchy-item">
+                  <mat-icon class="hierarchy-icon">key</mat-icon>
+                  <span class="hierarchy-label">Subscription:</span>
+                  <span class="hierarchy-value">{{utils.parseAzureScope(row.scope).subscriptionId}}</span>
+                </div>
+                <div *ngIf="utils.parseAzureScope(row.scope).resourceGroup" class="hierarchy-item">
+                  <mat-icon class="hierarchy-icon">folder</mat-icon>
+                  <span class="hierarchy-label">Resource Group:</span>
+                  <span class="hierarchy-value">{{utils.parseAzureScope(row.scope).resourceGroup}}</span>
+                </div>
+                <div *ngIf="utils.parseAzureScope(row.scope).resourceProvider" class="hierarchy-item">
+                  <mat-icon class="hierarchy-icon">category</mat-icon>
+                  <span class="hierarchy-label">Provider:</span>
+                  <span class="hierarchy-value">{{utils.parseAzureScope(row.scope).resourceProvider}}</span>
+                </div>
+              </div>
+              <div class="scope-condition" *ngIf="row.condition">
+                <mat-icon class="condition-icon">rule</mat-icon>
+                <span class="condition-label">Conditional assignment</span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumnsAzureRole"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumnsAzureRole;"></tr>
+      </table>
+
+      <div *ngIf="!azureRoleAssignments || azureRoleAssignments.length === 0" class="no-data">
+        <mat-icon>inbox</mat-icon>
+        <p>No Azure role assignments</p>
+      </div>
+    </mat-expansion-panel>
   </mat-tab>
 
   <mat-tab label="Metadata" *ngIf="metadata.length > 0">

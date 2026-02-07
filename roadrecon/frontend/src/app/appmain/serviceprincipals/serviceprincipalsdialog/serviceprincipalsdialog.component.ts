@@ -1,7 +1,8 @@
 import { Component, OnInit, Inject, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ServicePrincipalsItem, AppRolesItem, DatabaseService } from '../../aadobjects.service'
+import { ServicePrincipalsItem, AppRolesItem, DatabaseService, TenantDetail, AzureRoleAssignment, AzureScopeInfo } from '../../aadobjects.service'
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { UtilitiesService } from '../../utils.service';
 import { MatSort } from '@angular/material/sort';
 import { Location } from '@angular/common';
 @Component({
@@ -48,13 +49,18 @@ export class ServicePrincipalsdialogComponent {
   public displayedColumnsOAuth2: string[] = ['value', 'userConsentDisplayName','userConsentDescription', 'adminConsentDisplayName', 'adminConsentDescription', 'id', 'type']
   public displayedColumnsAppRolesAssigned: string[] =  ['pname', 'ptype', 'value', 'desc'];
   public displayedColumnsAppRolesAssignedTo: string[] =  ['pname', 'ptype', 'value', 'app', 'desc'];
+  public displayedColumnsAccessPackage: string[] = ['packageName', 'resources', 'approval', 'duration'];
+  public displayedColumnsAzureRole: string[] = ['role', 'scopeType', 'scopeDetails'];
   public metadata: object[] = [];
   public approlesgiven: AppRolesItem[] = [];
   public approlesgivento: AppRolesItem[] = [];
+  public tenantdetails: TenantDetail;
+  public azureRoleAssignments: AzureRoleAssignment[] = [];
   @ViewChild(MatSort, {static: true}) sort: MatSort;
   constructor(
     public dialogRef: MatDialogRef<ServicePrincipalsdialogComponent>,
     private service: DatabaseService,
+    public utils: UtilitiesService,
     @Inject(MAT_DIALOG_DATA) public sp: ServicePrincipalsItem
   ) {
     if (sp.appMetadata && sp.appMetadata.data.length > 0){
@@ -89,5 +95,8 @@ export class ServicePrincipalsdialogComponent {
     if (sp.appRolesAssignedTo && sp.appRolesAssignedTo.length > 0){
       this.service.getAppRolesByPrincipal(sp.objectId).subscribe((data: AppRolesItem[]) => this.approlesgivento.push(...data));
     }
+    this.service.getTenantDetail().subscribe((data: TenantDetail) => this.tenantdetails = data);
+    this.service.getServicePrincipalAzureRoleAssignments(this.sp.objectId).subscribe((data: AzureRoleAssignment[]) => this.azureRoleAssignments = data);
+
   }
 }

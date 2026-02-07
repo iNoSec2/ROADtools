@@ -16,9 +16,11 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClientModule } from '@angular/common/http';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { UsersItem, DatabaseService, UsersResolveService, DevicesResolveService, GroupsResolveService, ServicePrincipalsResolveService } from './aadobjects.service'
+import { UtilitiesService } from './utils.service'
 import { RouterModule } from '@angular/router';
 import { UsersdialogComponent } from './users/usersdialog/usersdialog.component';
 import { GroupsdialogComponent } from './groups/groupsdialog/groupsdialog.component';
@@ -85,6 +87,7 @@ import { Oauth2permissionsComponent } from './oauth2permissions/oauth2permission
     MatButtonModule,
     MatTooltipModule,
     MatSlideToggleModule,
+    MatProgressSpinnerModule,
     NgxWebstorageModule.forRoot({'prefix':'RT'}),
   ],
   exports: [
@@ -97,7 +100,8 @@ import { Oauth2permissionsComponent } from './oauth2permissions/oauth2permission
     UsersResolveService,
     GroupsResolveService,
     DevicesResolveService,
-    ServicePrincipalsResolveService
+    ServicePrincipalsResolveService,
+    UtilitiesService,
   ]
 })
 export class AppmainModule {

@@ -9,5 +9,9 @@
       <mat-slide-toggle [(ngModel)]="portallinks" [checked]="portallinks">
         Show management links to Entra portal on objects
       </mat-slide-toggle>
+      <br />
+      <mat-slide-toggle [(ngModel)]="paging" [checked]="paging">
+        Use server-side paging (beta). Improves performance in large tenants but will limit the search capabilities to only certain columns.
+      </mat-slide-toggle>
   </mat-card-content>
 </mat-card>

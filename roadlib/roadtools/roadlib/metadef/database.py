@@ -1669,6 +1669,12 @@ class AZroleDefinition(Base, SerializeMixin):
     created_on = Column(DateTime)
     permissions = Column(JSON)
 
+    roleAssignments = relationship("AZroleAssignment",
+        back_populates="role")
+
+    eligibleRoleAssignments = relationship("AZroleEligibilityScheduleInstance",
+        back_populates="role")
+
 class AZroleAssignment(Base, SerializeMixin):
     __tablename__ = 'AZroleAssignments'
 
@@ -1696,6 +1702,9 @@ class AZroleAssignment(Base, SerializeMixin):
     serviceprincipal = relationship("ServicePrincipal",
         secondary=lnk_az_roleassignment_serviceprincipal,
         back_populates="azRoleAssignments")
+
+    role = relationship("AZroleDefinition",
+        back_populates="roleAssignments")
 
 class AZsubscription(Base, SerializeMixin):
     __tablename__ = 'AZsubscriptions'
@@ -1748,6 +1757,9 @@ class AZroleEligibilityScheduleInstance(Base, SerializeMixin):
     serviceprincipal = relationship("ServicePrincipal",
         secondary=lnk_az_roleassignment_eligible_serviceprincipal,
         back_populates="azEligibleRoleAssignments")
+
+    role = relationship("AZroleDefinition",
+        back_populates="eligibleRoleAssignments")
 
 class AZresource(Base, SerializeMixin):
     __tablename__ = 'AZresources'

@@ -56,7 +56,7 @@ const routes: Routes = [
             path: ':id',
             component: GroupsdialogInitComponent,
             resolve: {
-              user: GroupsResolveService
+              group: GroupsResolveService
             }
           }
         ]
