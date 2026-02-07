@@ -36,13 +36,15 @@ class DateTime(TypeDecorator):
                 else:
                     value = datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
             elif '.' in value:
-                if '+' in value:
+                if '+' in value[-7:] or '-' in value[-7:]:
                     value = datetime.datetime.strptime(value[:-7], '%Y-%m-%dT%H:%M:%S.%f')
                 else:
                     try:
                         value = datetime.datetime.strptime(value[:-1], '%Y-%m-%dT%H:%M:%S.%f')
                     except ValueError:
                         value = datetime.datetime.strptime(value[:-1], '%Y-%m-%dT%H:%M:%S.')
+            elif '+' in value[-7:] or '-' in value[-7:]:
+                value = datetime.datetime.strptime(value[:-6], '%Y-%m-%dT%H:%M:%S')
             else:
                 value = datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
 
@@ -155,6 +157,170 @@ lnk_au_member_group = Table('lnk_au_member_group', Base.metadata,
 lnk_au_member_device = Table('lnk_au_member_device', Base.metadata,
     Column('AdministrativeUnit', Text, ForeignKey('AdministrativeUnits.objectId')),
     Column('Device', Text, ForeignKey('Devices.objectId'))
+)
+
+lnk_policy_user_include = Table('lnk_policy_user_include', Base.metadata,
+    Column('Policy', Text, ForeignKey('Policys.objectId')),
+    Column('User', Text, ForeignKey('Users.objectId'))
+)
+
+lnk_policy_user_exclude = Table('lnk_policy_user_exclude', Base.metadata,
+    Column('Policy', Text, ForeignKey('Policys.objectId')),
+    Column('User', Text, ForeignKey('Users.objectId'))
+)
+
+lnk_pim_resource = Table('lnk_pim_resource', Base.metadata,
+    Column('PIMprivilegedAccess', Text, ForeignKey('PIMprivilegedAccesss.id')),
+    Column('PIMgovernanceResource', Text, ForeignKey('PIMgovernanceResources.id'))
+)
+
+lnk_pim_resource_rolealerts = Table('lnk_pim_resource_rolealerts', Base.metadata,
+    Column('PIMgovernanceResource', Text, ForeignKey('PIMgovernanceResources.id')),
+    Column('PIMgovernanceAlert', Text, ForeignKey('PIMgovernanceAlerts.id'))
+)
+
+lnk_pim_resource_aadgroup = Table('lnk_pim_resource_aadgroup', Base.metadata,
+    Column('PIMgovernanceResource', Text, ForeignKey('PIMgovernanceResources.id')),
+    Column('Group', Text, ForeignKey('Groups.objectId'))
+)
+
+lnk_pim_roleassignment_subjectuser = Table('lnk_pim_roleassignment_subjectuser', Base.metadata,
+    Column('PIMgovernanceRoleAssignment', Text, ForeignKey('PIMgovernanceRoleAssignments.id')),
+    Column('User', Text, ForeignKey('Users.objectId'))
+)
+
+lnk_pim_roleassignment_subjectgroup = Table('lnk_pim_roleassignment_subjectgroup', Base.metadata,
+    Column('PIMgovernanceRoleAssignment', Text, ForeignKey('PIMgovernanceRoleAssignments.id')),
+    Column('Group', Text, ForeignKey('Groups.objectId'))
+)
+
+lnk_pim_roleassignment_subjectserviceprincipal = Table('lnk_pim_roleassignment_subjectserviceprincipal', Base.metadata,
+    Column('PIMgovernanceRoleAssignment', Text, ForeignKey('PIMgovernanceRoleAssignments.id')),
+    Column('ServicePrincipal', Text, ForeignKey('ServicePrincipals.objectId'))
+)
+
+lnk_pim_roleassignmentrequest_subjectuser = Table('lnk_pim_roleassignmentrequest_subjectuser', Base.metadata,
+    Column('PIMgovernanceRoleAssignmentRequest', Text, ForeignKey('PIMgovernanceRoleAssignmentRequests.id')),
+    Column('User', Text, ForeignKey('Users.objectId'))
+)
+
+lnk_pim_roleassignmentrequest_subjectgroup = Table('lnk_pim_roleassignmentrequest_subjectgroup', Base.metadata,
+    Column('PIMgovernanceRoleAssignmentRequest', Text, ForeignKey('PIMgovernanceRoleAssignmentRequests.id')),
+    Column('Group', Text, ForeignKey('Groups.objectId'))
+)
+
+lnk_pim_roleassignmentrequest_subjectserviceprincipal = Table('lnk_pim_roleassignmentrequest_subjectserviceprincipal', Base.metadata,
+    Column('PIMgovernanceRoleAssignmentRequest', Text, ForeignKey('PIMgovernanceRoleAssignmentRequests.id')),
+    Column('ServicePrincipal', Text, ForeignKey('ServicePrincipals.objectId'))
+)
+
+lnk_ig_cg_resource = Table('lnk_ig_cg_resource', Base.metadata,
+    Column('IGaccessPackageCatalog', Text, ForeignKey('IGaccessPackageCatalogs.id')),
+    Column('IGaccessPackageResource', Text, ForeignKey('IGaccessPackageResources.id'))
+)
+
+lnk_ig_ap = Table('lnk_ig_ap', Base.metadata,
+    Column('IGaccessPackageCatalog', Text, ForeignKey('IGaccessPackageCatalogs.id')),
+    Column('IGaccessPackage', Text, ForeignKey('IGaccessPackages.id'))
+)
+
+lnk_ig_ap_resource_request = Table('lnk_ig_ap_resource_request', Base.metadata,
+    Column('IGaccessPackageResource', Text, ForeignKey('IGaccessPackageResources.id')),
+    Column('IGaccessPackageResourceRequest', Text, ForeignKey('IGaccessPackageResourceRequests.id'))
+)
+
+lnk_ig_ap_rrs_role = Table('lnk_ig_ap_rrs_role', Base.metadata,
+    Column('IGaccessPackageResourceRoleScope', Text, ForeignKey('IGaccessPackageResourceRoleScopes.id')),
+    Column('IGaccessPackageResourceRole', Text, ForeignKey('IGaccessPackageResourceRoles.id'))
+)
+
+lnk_ig_ap_rrs_scope = Table('lnk_ig_ap_rrs_scope', Base.metadata,
+    Column('IGaccessPackageResourceRoleScope', Text, ForeignKey('IGaccessPackageResourceRoleScopes.id')),
+    Column('IGaccessPackageResourceScope', Text, ForeignKey('IGaccessPackageResourceScopes.id'))
+)
+
+lnk_ig_ap_rr = Table('lnk_ig_ap_rr', Base.metadata,
+    Column('IGaccessPackageResource', Text, ForeignKey('IGaccessPackageResources.id')),
+    Column('IGaccessPackageResourceRole', Text, ForeignKey('IGaccessPackageResourceRoles.id'))
+)
+
+lnk_ig_ap_rr_scope = Table('lnk_ig_ap_rr_scope', Base.metadata,
+    Column('IGaccessPackage', Text, ForeignKey('IGaccessPackages.id')),
+    Column('IGaccessPackageResourceRoleScope', Text, ForeignKey('IGaccessPackageResourceRoleScopes.id'))
+)
+
+lnk_ig_ap_assignment_target = Table('lnk_ig_ap_assignment_target', Base.metadata,
+    Column('IGaccessPackageAssignment', Text, ForeignKey('IGaccessPackageAssignments.id')),
+    Column('IGaccessPackageSubject', Text, ForeignKey('IGaccessPackageSubjects.id'))
+)
+
+lnk_ig_ap_assignment_request = Table('lnk_ig_ap_assignment_request', Base.metadata,
+    Column('IGaccessPackage', Text, ForeignKey('IGaccessPackages.id')),
+    Column('IGaccessPackageAssignmentRequest', Text, ForeignKey('IGaccessPackageAssignmentRequests.id'))
+)
+
+lnk_ig_ap_assignment_request_target = Table('lnk_ig_ap_assignment_request_target', Base.metadata,
+    Column('IGaccessPackageAssignmentRequest', Text, ForeignKey('IGaccessPackageAssignmentRequests.id')),
+    Column('IGaccessPackageSubject', Text, ForeignKey('IGaccessPackageSubjects.id'))
+)
+
+lnk_ig_ap_assignment_request_requestor = Table('lnk_ig_ap_assignment_request_requestor', Base.metadata,
+    Column('IGaccessPackageAssignmentRequest', Text, ForeignKey('IGaccessPackageAssignmentRequests.id')),
+    Column('IGaccessPackageSubject', Text, ForeignKey('IGaccessPackageSubjects.id'))
+)
+
+lnk_ig_ap_assignment_policy_inscope_user = Table('lnk_ig_ap_assignment_policy_inscope_user', Base.metadata,
+    Column('IGaccessPackageAssignmentPolicy', Text, ForeignKey('IGaccessPackageAssignmentPolicys.id')),
+    Column('User', Text, ForeignKey('Users.objectId'))
+)
+
+lnk_ig_ap_assignment_policy_inscope_group = Table('lnk_ig_ap_assignment_policy_inscope_group', Base.metadata,
+    Column('IGaccessPackageAssignmentPolicy', Text, ForeignKey('IGaccessPackageAssignmentPolicys.id')),
+    Column('Group', Text, ForeignKey('Groups.objectId'))
+)
+
+lnk_ig_ap_assignment_policy_inscope_serviceprincipal = Table('lnk_ig_ap_assignment_policy_inscope_serviceprincipal', Base.metadata,
+    Column('IGaccessPackageAssignmentPolicy', Text, ForeignKey('IGaccessPackageAssignmentPolicys.id')),
+    Column('ServicePrincipal', Text, ForeignKey('ServicePrincipals.objectId'))
+)
+
+lnk_ig_ap_assignment_resource_role = Table('lnk_ig_ap_assignment_resource_role', Base.metadata,
+    Column('IGaccessPackageAssignment', Text, ForeignKey('IGaccessPackageAssignments.id')),
+    Column('IGaccessPackageAssignmentResourceRole', Text, ForeignKey('IGaccessPackageAssignmentResourceRoles.id'))
+)
+
+lnk_az_roleassignment_user = Table('lnk_az_roleassignment_user', Base.metadata,
+    Column('AZroleAssignment', Text, ForeignKey('AZroleAssignments.id')),
+    Column('User', Text, ForeignKey('Users.objectId'))
+)
+
+lnk_az_roleassignment_group = Table('lnk_az_roleassignment_group', Base.metadata,
+    Column('AZroleAssignment', Text, ForeignKey('AZroleAssignments.id')),
+    Column('Group', Text, ForeignKey('Groups.objectId'))
+)
+
+lnk_az_roleassignment_serviceprincipal = Table('lnk_az_roleassignment_serviceprincipal', Base.metadata,
+    Column('AZroleAssignment', Text, ForeignKey('AZroleAssignments.id')),
+    Column('ServicePrincipal', Text, ForeignKey('ServicePrincipals.objectId'))
+)
+
+lnk_az_roleassignment_eligible_user = Table('lnk_az_roleassignment_eligible_user', Base.metadata,
+    Column('AZroleEligibilityScheduleInstance', Text, ForeignKey('AZroleEligibilityScheduleInstances.id')),
+    Column('User', Text, ForeignKey('Users.objectId'))
+)
+
+lnk_az_roleassignment_eligible_group = Table('lnk_az_roleassignment_eligible_group', Base.metadata,
+    Column('AZroleEligibilityScheduleInstance', Text, ForeignKey('AZroleEligibilityScheduleInstances.id')),
+    Column('Group', Text, ForeignKey('Groups.objectId'))
+)
+
+lnk_az_roleassignment_eligible_serviceprincipal = Table('lnk_az_roleassignment_eligible_serviceprincipal', Base.metadata,
+    Column('AZroleEligibilityScheduleInstance', Text, ForeignKey('AZroleEligibilityScheduleInstances.id')),
+    Column('ServicePrincipal', Text, ForeignKey('ServicePrincipals.objectId'))
+)
+
+lnk_policy_user_include_allusers = Table('lnk_policy_user_include_allusers', Base.metadata,
+    Column('Policy', Text, ForeignKey('Policys.objectId'))
 )
 
 class AppRoleAssignment(Base, SerializeMixin):
@@ -334,6 +500,34 @@ class User(Base, SerializeMixin):
         secondary=lnk_au_member_user,
         back_populates="memberUsers")
 
+    policiesIncluded = relationship("Policy",
+        secondary=lnk_policy_user_include,
+        back_populates="includedUsers")
+
+    policiesExcluded = relationship("Policy",
+        secondary=lnk_policy_user_exclude,
+        back_populates="excludedUsers")
+
+    pimRoleAssignments = relationship("PIMgovernanceRoleAssignment",
+        secondary=lnk_pim_roleassignment_subjectuser,
+        back_populates="subjectUser")
+
+    pimRoleAssignmentRequests = relationship("PIMgovernanceRoleAssignmentRequest",
+        secondary=lnk_pim_roleassignmentrequest_subjectuser,
+        back_populates="subjectUser")
+
+    accessPackagePolicies = relationship("IGaccessPackageAssignmentPolicy",
+        secondary=lnk_ig_ap_assignment_policy_inscope_user,
+        back_populates="scopeUsers")
+
+    azRoleAssignments = relationship("AZroleAssignment",
+        secondary=lnk_az_roleassignment_user,
+        back_populates="user")
+
+    azEligibleRoleAssignments = relationship("AZroleEligibilityScheduleInstance",
+        secondary=lnk_az_roleassignment_eligible_user,
+        back_populates="user")
+
 
 class ServicePrincipal(Base, SerializeMixin):
     __tablename__ = "ServicePrincipals"
@@ -410,6 +604,26 @@ class ServicePrincipal(Base, SerializeMixin):
     ownedGroups = relationship("Group",
         secondary=lnk_group_owner_serviceprincipal,
         back_populates="ownerServicePrincipals")
+
+    pimRoleAssignments = relationship("PIMgovernanceRoleAssignment",
+        secondary=lnk_pim_roleassignment_subjectserviceprincipal,
+        back_populates="subjectServicePrincipal")
+
+    pimRoleAssignmentRequests = relationship("PIMgovernanceRoleAssignmentRequest",
+        secondary=lnk_pim_roleassignmentrequest_subjectserviceprincipal,
+        back_populates="subjectServicePrincipal")
+
+    accessPackagePolicies = relationship("IGaccessPackageAssignmentPolicy",
+        secondary=lnk_ig_ap_assignment_policy_inscope_serviceprincipal,
+        back_populates="scopeServicePrincipals")
+
+    azRoleAssignments = relationship("AZroleAssignment",
+        secondary=lnk_az_roleassignment_serviceprincipal,
+        back_populates="serviceprincipal")
+
+    azEligibleRoleAssignments = relationship("AZroleEligibilityScheduleInstance",
+        secondary=lnk_az_roleassignment_eligible_serviceprincipal,
+        back_populates="serviceprincipal")
 
 
     oauth2PermissionGrants = relationship("OAuth2PermissionGrant",
@@ -512,6 +726,30 @@ class Group(Base, SerializeMixin):
     memberOfAu = relationship("AdministrativeUnit",
         secondary=lnk_au_member_group,
         back_populates="memberGroups")
+
+    pimRoleAssignments = relationship("PIMgovernanceRoleAssignment",
+        secondary=lnk_pim_roleassignment_subjectgroup,
+        back_populates="subjectGroup")
+
+    pimRoleAssignmentRequests = relationship("PIMgovernanceRoleAssignmentRequest",
+        secondary=lnk_pim_roleassignmentrequest_subjectgroup,
+        back_populates="subjectGroup")
+
+    accessPackagePolicies = relationship("IGaccessPackageAssignmentPolicy",
+        secondary=lnk_ig_ap_assignment_policy_inscope_group,
+        back_populates="scopeGroups")
+
+    azRoleAssignments = relationship("AZroleAssignment",
+        secondary=lnk_az_roleassignment_group,
+        back_populates="group")
+
+    azEligibleRoleAssignments = relationship("AZroleEligibilityScheduleInstance",
+        secondary=lnk_az_roleassignment_eligible_group,
+        back_populates="group")
+
+    pimResource = relationship("PIMgovernanceResource",
+        secondary=lnk_pim_resource_aadgroup,
+        back_populates="group")
 
 
 class Application(Base, SerializeMixin):
@@ -789,6 +1027,13 @@ class Policy(Base, SerializeMixin):
     policyDetail = Column(JSON)
     policyIdentifier = Column(Text)
     tenantDefaultPolicy = Column(Integer)
+    includedUsers = relationship("User",
+        secondary=lnk_policy_user_include,
+        back_populates="policiesIncluded")
+
+    excludedUsers = relationship("User",
+        secondary=lnk_policy_user_exclude,
+        back_populates="policiesExcluded")
 
 
 class RoleDefinition(Base, SerializeMixin):
@@ -878,6 +1123,647 @@ class AdministrativeUnit(Base, SerializeMixin):
     memberDevices = relationship("Device",
         secondary=lnk_au_member_device,
         back_populates="memberOfAu")
+
+
+class PIMprivilegedAccess(Base, SerializeMixin):
+    __tablename__ = "PIMprivilegedAccesss"
+    id = Column(Text, primary_key=True)
+    displayName = Column(Text)
+    resources = relationship("PIMgovernanceResource",
+        secondary=lnk_pim_resource,
+        back_populates="parent")
+
+
+class PIMgovernanceResource(Base, SerializeMixin):
+    __tablename__ = "PIMgovernanceResources"
+    id = Column(Text, primary_key=True)
+    externalId = Column(Text)
+    type = Column(Text)
+    displayName = Column(Text)
+    status = Column(Text)
+    onboardDateTime = Column(DateTime)
+    registeredDateTime = Column(DateTime)
+    managedAt = Column(Text)
+    registeredRoot = Column(Text)
+    originTenantId = Column(Text)
+    roleDefinitions = relationship("PIMgovernanceRoleDefinition",
+        back_populates="resource")
+
+    roleAssignments = relationship("PIMgovernanceRoleAssignment",
+        back_populates="resource")
+
+    roleAssignmentrequests = relationship("PIMgovernanceRoleAssignmentRequest",
+        back_populates="resource")
+
+    alerts = relationship("PIMgovernanceAlert",
+        secondary=lnk_pim_resource_rolealerts,
+        back_populates="resource")
+
+    roleSettings = relationship("PIMgovernanceRoleSetting",
+        back_populates="resource")
+
+    roleSettingsv2 = relationship("PIMgovernanceRoleSettingV2",
+        back_populates="resource")
+
+    group = relationship("Group",
+        secondary=lnk_pim_resource_aadgroup,
+        back_populates="pimResource")
+
+    parent = relationship("PIMprivilegedAccess",
+        secondary=lnk_pim_resource,
+        back_populates="resources")
+
+
+class PIMgovernanceRoleDefinition(Base, SerializeMixin):
+    __tablename__ = "PIMgovernanceRoleDefinitions"
+    id = Column(Text, primary_key=True)
+    resourceId = Column(Text, ForeignKey("PIMgovernanceResources.id"))
+    externalId = Column(Text)
+    templateId = Column(Text)
+    displayName = Column(Text)
+    type = Column(Text)
+    roleAssignments = relationship("PIMgovernanceRoleAssignment",
+        back_populates="roleDefinition")
+
+    roleSettings = relationship("PIMgovernanceRoleSetting",
+        back_populates="roleDefinition")
+
+    roleSettingsv2 = relationship("PIMgovernanceRoleSettingV2",
+        back_populates="roleDefinition")
+
+    resource = relationship("PIMgovernanceResource",
+        back_populates="roleDefinitions")
+
+
+class PIMgovernanceRoleAssignment(Base, SerializeMixin):
+    __tablename__ = "PIMgovernanceRoleAssignments"
+    id = Column(Text, primary_key=True)
+    resourceId = Column(Text, ForeignKey("PIMgovernanceResources.id"))
+    roleDefinitionId = Column(Text, ForeignKey("PIMgovernanceRoleDefinitions.id"))
+    subjectId = Column(Text)
+    scopedResourceId = Column(Text)
+    linkedEligibleRoleAssignmentId = Column(Text)
+    externalId = Column(Text)
+    isPermanent = Column(Boolean)
+    startDateTime = Column(DateTime)
+    endDateTime = Column(DateTime)
+    memberType = Column(Text)
+    assignmentState = Column(Text)
+    status = Column(Text)
+    condition = Column(Text)
+    conditionVersion = Column(Text)
+    conditionDescription = Column(Text)
+    subjectUser = relationship("User",
+        secondary=lnk_pim_roleassignment_subjectuser,
+        back_populates="pimRoleAssignments")
+
+    subjectGroup = relationship("Group",
+        secondary=lnk_pim_roleassignment_subjectgroup,
+        back_populates="pimRoleAssignments")
+
+    subjectServicePrincipal = relationship("ServicePrincipal",
+        secondary=lnk_pim_roleassignment_subjectserviceprincipal,
+        back_populates="pimRoleAssignments")
+
+    resource = relationship("PIMgovernanceResource",
+        back_populates="roleAssignments")
+
+    roleDefinition = relationship("PIMgovernanceRoleDefinition",
+        back_populates="roleAssignments")
+
+
+class PIMgovernanceRoleAssignmentRequest(Base, SerializeMixin):
+    __tablename__ = "PIMgovernanceRoleAssignmentRequests"
+    id = Column(Text, primary_key=True)
+    resourceId = Column(Text, ForeignKey("PIMgovernanceResources.id"))
+    roleDefinitionId = Column(Text, ForeignKey("PIMgovernanceRoleDefinitions.id"))
+    subjectId = Column(Text)
+    scopedResourceId = Column(Text)
+    linkedEligibleRoleAssignmentId = Column(Text)
+    type = Column(Text)
+    assignmentState = Column(Text)
+    requestedDateTime = Column(DateTime)
+    roleAssignmentStartDateTime = Column(DateTime)
+    roleAssignmentEndDateTime = Column(DateTime)
+    reason = Column(Text)
+    status = Column(JSON)
+    schedule = Column(JSON)
+    PIMmetadata = Column(JSON)
+    ticketNumber = Column(Text)
+    ticketSystem = Column(Text)
+    condition = Column(Text)
+    conditionVersion = Column(Text)
+    conditionDescription = Column(Text)
+    subjectUser = relationship("User",
+        secondary=lnk_pim_roleassignmentrequest_subjectuser,
+        back_populates="pimRoleAssignmentRequests")
+
+    subjectGroup = relationship("Group",
+        secondary=lnk_pim_roleassignmentrequest_subjectgroup,
+        back_populates="pimRoleAssignmentRequests")
+
+    subjectServicePrincipal = relationship("ServicePrincipal",
+        secondary=lnk_pim_roleassignmentrequest_subjectserviceprincipal,
+        back_populates="pimRoleAssignmentRequests")
+
+    resource = relationship("PIMgovernanceResource",
+        back_populates="roleAssignmentrequests")
+
+
+class PIMgovernanceRoleSetting(Base, SerializeMixin):
+    __tablename__ = "PIMgovernanceRoleSettings"
+    id = Column(Text, primary_key=True)
+    resourceId = Column(Text, ForeignKey("PIMgovernanceResources.id"))
+    roleDefinitionId = Column(Text, ForeignKey("PIMgovernanceRoleDefinitions.id"))
+    isDefault = Column(Boolean)
+    lastUpdatedDateTime = Column(DateTime)
+    lastUpdatedBy = Column(Text)
+    adminEligibleSettings = Column(JSON)
+    adminMemberSettings = Column(JSON)
+    userEligibleSettings = Column(JSON)
+    userMemberSettings = Column(JSON)
+    resource = relationship("PIMgovernanceResource",
+        back_populates="roleSettings")
+
+    roleDefinition = relationship("PIMgovernanceRoleDefinition",
+        back_populates="roleSettings")
+
+
+class PIMgovernanceRoleSettingV2(Base, SerializeMixin):
+    __tablename__ = "PIMgovernanceRoleSettingV2s"
+    id = Column(Text, primary_key=True)
+    resourceId = Column(Text, ForeignKey("PIMgovernanceResources.id"))
+    roleDefinitionId = Column(Text, ForeignKey("PIMgovernanceRoleDefinitions.id"))
+    isDefault = Column(Boolean)
+    lastUpdatedDateTime = Column(DateTime)
+    lastUpdatedBy = Column(Text)
+    lifeCycleManagement = Column(JSON)
+    resource = relationship("PIMgovernanceResource",
+        back_populates="roleSettingsv2")
+
+    roleDefinition = relationship("PIMgovernanceRoleDefinition",
+        back_populates="roleSettingsv2")
+
+
+class PIMgovernanceAlert(Base, SerializeMixin):
+    __tablename__ = "PIMgovernanceAlerts"
+    id = Column(Text, primary_key=True)
+    resourceId = Column(Text, ForeignKey("PIMgovernanceResources.id"))
+    alertName = Column(Text)
+    alertDescription = Column(Text)
+    numberOfAffectedItems = Column(Integer)
+    additionalData = Column(JSON)
+    lastModifiedDateTime = Column(DateTime)
+    lastScannedDateTime = Column(DateTime)
+    severityLevel = Column(Text)
+    alertType = Column(Text)
+    securityImpact = Column(Text)
+    mitigationSteps = Column(Text)
+    howToPrevent = Column(Text)
+    isDisabled = Column(Boolean)
+    isActive = Column(Boolean)
+    isResolvable = Column(Boolean)
+    isConfigurable = Column(Boolean)
+    status = Column(Text)
+    settings = Column(JSON)
+    resource = relationship("PIMgovernanceResource",
+        secondary=lnk_pim_resource_rolealerts,
+        back_populates="alerts")
+
+
+class IGaccessPackageCatalog(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageCatalogs"
+    id = Column(Text, primary_key=True)
+    displayName = Column(Text)
+    uniqueName = Column(Text)
+    description = Column(Text)
+    catalogType = Column(Text)
+    catalogStatus = Column(Text)
+    state = Column(Text)
+    isExternallyVisible = Column(Boolean)
+    createdBy = Column(Text)
+    createdByString = Column(Text)
+    createdDateTime = Column(DateTime)
+    modifiedBy = Column(Text)
+    lastModifiedByString = Column(Text)
+    modifiedDateTime = Column(DateTime)
+    lastModifiedDateTime = Column(DateTime)
+    serviceManagementReference = Column(JSON)
+    privilegeLevel = Column(Text)
+    resources = relationship("IGaccessPackageResource",
+        secondary=lnk_ig_cg_resource,
+        back_populates="catalog")
+
+    accessPackages = relationship("IGaccessPackage",
+        secondary=lnk_ig_ap,
+        back_populates="catalog")
+
+
+class IGaccessPackageResource(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageResources"
+    id = Column(Text, primary_key=True)
+    displayName = Column(Text)
+    description = Column(Text)
+    url = Column(Text)
+    resourceType = Column(Text)
+    originId = Column(Text)
+    originSystem = Column(Text)
+    isPendingOnboarding = Column(Boolean)
+    addedBy = Column(Text)
+    addedOn = Column(DateTime)
+    attributes = Column(JSON)
+    createdBy = Column(Text)
+    createdByString = Column(Text)
+    createdDateTime = Column(DateTime)
+    resourceRequests = relationship("IGaccessPackageResourceRequest",
+        secondary=lnk_ig_ap_resource_request,
+        back_populates="resource")
+
+    resourceRoles = relationship("IGaccessPackageResourceRole",
+        secondary=lnk_ig_ap_rr,
+        back_populates="resource")
+
+    catalog = relationship("IGaccessPackageCatalog",
+        secondary=lnk_ig_cg_resource,
+        back_populates="resources")
+
+
+class IGaccessPackageResourceRequest(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageResourceRequests"
+    id = Column(Text, primary_key=True)
+    requestType = Column(Text)
+    requestState = Column(Text)
+    state = Column(Text)
+    requestStatus = Column(Text)
+    createdBy = Column(Text)
+    createdByString = Column(Text)
+    createdDateTime = Column(DateTime)
+    catalogId = Column(Text)
+    executeImmediately = Column(Boolean)
+    justification = Column(Text)
+    expirationDateTime = Column(DateTime)
+    history = Column(JSON)
+    answers = Column(JSON)
+    parameters = Column(JSON)
+    resource = relationship("IGaccessPackageResource",
+        secondary=lnk_ig_ap_resource_request,
+        back_populates="resourceRequests")
+
+
+class IGaccessPackage(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackages"
+    id = Column(Text, primary_key=True)
+    catalogId = Column(Text)
+    displayName = Column(Text)
+    uniqueName = Column(Text)
+    description = Column(Text)
+    isHidden = Column(Boolean)
+    isRoleScopesVisible = Column(Boolean)
+    createdBy = Column(Text)
+    createdByString = Column(Text)
+    createdDateTime = Column(DateTime)
+    modifiedBy = Column(Text)
+    lastModifiedByString = Column(Text)
+    modifiedDateTime = Column(DateTime)
+    lastModifiedDateTime = Column(DateTime)
+    lastCriticalModificationDateTime = Column(DateTime)
+    lastSuccessfulChangeEvaluationDateTime = Column(DateTime)
+    assignmentPolicies = relationship("IGaccessPackageAssignmentPolicy",
+        back_populates="accessPackage")
+
+    assignments = relationship("IGaccessPackageAssignment",
+        back_populates="accessPackage")
+
+    assignmentRequests = relationship("IGaccessPackageAssignmentRequest",
+        secondary=lnk_ig_ap_assignment_request,
+        back_populates="accessPackage")
+
+    resourceRoleScopes = relationship("IGaccessPackageResourceRoleScope",
+        secondary=lnk_ig_ap_rr_scope,
+        back_populates="accessPackage")
+
+    catalog = relationship("IGaccessPackageCatalog",
+        secondary=lnk_ig_ap,
+        back_populates="accessPackages")
+
+
+class IGaccessPackageResourceRoleScope(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageResourceRoleScopes"
+    id = Column(Text, primary_key=True)
+    createdBy = Column(Text)
+    createdByString = Column(Text)
+    createdDateTime = Column(DateTime)
+    modifiedBy = Column(Text)
+    modifiedDateTime = Column(DateTime)
+    role = relationship("IGaccessPackageResourceRole",
+        secondary=lnk_ig_ap_rrs_role,
+        back_populates="resourceRoleScopes")
+
+    scope = relationship("IGaccessPackageResourceScope",
+        secondary=lnk_ig_ap_rrs_scope,
+        back_populates="resourceRoleScopes")
+
+    accessPackage = relationship("IGaccessPackage",
+        secondary=lnk_ig_ap_rr_scope,
+        back_populates="resourceRoleScopes")
+
+
+class IGaccessPackageResourceScope(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageResourceScopes"
+    id = Column(Text, primary_key=True)
+    displayName = Column(Text)
+    description = Column(Text)
+    originId = Column(Text)
+    originSystem = Column(Text)
+    roleOriginId = Column(Text)
+    isRootScope = Column(Boolean)
+    url = Column(Text)
+    resourceRoleScopes = relationship("IGaccessPackageResourceRoleScope",
+        secondary=lnk_ig_ap_rrs_scope,
+        back_populates="scope")
+
+
+class IGaccessPackageResourceRole(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageResourceRoles"
+    id = Column(Text, primary_key=True)
+    displayName = Column(Text)
+    description = Column(Text)
+    roleType = Column(Text)
+    originSystem = Column(Text)
+    originId = Column(Text)
+    resourceRoleScopes = relationship("IGaccessPackageResourceRoleScope",
+        secondary=lnk_ig_ap_rrs_role,
+        back_populates="role")
+
+    resource = relationship("IGaccessPackageResource",
+        secondary=lnk_ig_ap_rr,
+        back_populates="resourceRoles")
+
+
+class IGaccessPackageAssignmentPolicy(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageAssignmentPolicys"
+    id = Column(Text, primary_key=True)
+    displayName = Column(Text)
+    description = Column(Text)
+    allowedTargetScope = Column(Text)
+    specificAllowedTargets = Column(JSON)
+    expiration = Column(JSON)
+    countOfUsersIncludedInPolicy = Column(Integer)
+    activeAssignmentCount = Column(Integer)
+    createdDateTime = Column(DateTime)
+    createdByString = Column(Text)
+    accessPackageAssignmentRequestorSettings = Column(JSON)
+    automaticRequestSettings = Column(JSON)
+    lastModifiedByString = Column(Text)
+    approvalSettings = Column(JSON)
+    lastModifiedDateTime = Column(DateTime)
+    reviewSettings = Column(JSON)
+    questions = Column(JSON)
+    notificationSettings = Column(JSON)
+    accessPackageNotificationSettings = Column(JSON)
+    verifiableCredentialSettings = Column(JSON)
+    createdBy = Column(Text)
+    modifiedBy = Column(Text)
+    isDenyPolicy = Column(Boolean)
+    canExtend = Column(Boolean)
+    durationInDays = Column(Integer)
+    expirationDateTime = Column(DateTime)
+    isCustomAssignmentScheduleAllowed = Column(Boolean)
+    policyAssignmentType = Column(Text)
+    requestorSettings = Column(JSON)
+    accessReviewSettings = Column(JSON)
+    assignmentReviewSettings = Column(JSON)
+    requestApprovalSettings = Column(JSON)
+    accessPackageId = Column(Text, ForeignKey("IGaccessPackages.id"))
+    modifiedDateTime = Column(DateTime)
+    scopeUsers = relationship("User",
+        secondary=lnk_ig_ap_assignment_policy_inscope_user,
+        back_populates="accessPackagePolicies")
+
+    scopeGroups = relationship("Group",
+        secondary=lnk_ig_ap_assignment_policy_inscope_group,
+        back_populates="accessPackagePolicies")
+
+    scopeServicePrincipals = relationship("ServicePrincipal",
+        secondary=lnk_ig_ap_assignment_policy_inscope_serviceprincipal,
+        back_populates="accessPackagePolicies")
+
+    accessPackage = relationship("IGaccessPackage",
+        back_populates="assignmentPolicies")
+
+
+class IGaccessPackageAssignment(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageAssignments"
+    id = Column(Text, primary_key=True)
+    catalogId = Column(Text)
+    accessPackageId = Column(Text, ForeignKey("IGaccessPackages.id"))
+    assignmentPolicyId = Column(Text, ForeignKey("IGaccessPackageAssignmentPolicys.id"))
+    targetId = Column(Text)
+    schedule = Column(JSON)
+    assignmentStatus = Column(Text)
+    assignmentState = Column(Text)
+    state = Column(Text)
+    status = Column(Text)
+    isExtended = Column(Boolean)
+    expiredDateTime = Column(DateTime)
+    createdDateTime = Column(DateTime)
+    modifiedDateTime = Column(DateTime)
+    history = Column(JSON)
+    customExtensionHandlerInstances = Column(JSON)
+    customExtensionCalloutInstances = Column(JSON)
+    assignmentResourceRoles = relationship("IGaccessPackageAssignmentResourceRole",
+        secondary=lnk_ig_ap_assignment_resource_role,
+        back_populates="assignment")
+
+    subject = relationship("IGaccessPackageSubject",
+        secondary=lnk_ig_ap_assignment_target,
+        back_populates="assignments")
+
+    accessPackage = relationship("IGaccessPackage",
+        back_populates="assignments")
+
+
+class IGaccessPackageAssignmentRequest(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageAssignmentRequests"
+    id = Column(Text, primary_key=True)
+    requestType = Column(Text)
+    schedule = Column(JSON)
+    answers = Column(JSON)
+    requestState = Column(Text)
+    state = Column(Text)
+    requestStatus = Column(Text)
+    status = Column(Text)
+    createdDateTime = Column(DateTime)
+    modifiedDateTime = Column(DateTime)
+    completedDate = Column(DateTime)
+    justification = Column(Text)
+    isValidationOnly = Column(Boolean)
+    history = Column(JSON)
+    parameters = Column(JSON)
+    customProperties = Column(JSON)
+    referenceId = Column(Text)
+    verifiedCredentialsData = Column(JSON)
+    customExtensionHandlerInstances = Column(JSON)
+    customExtensionCalloutInstances = Column(JSON)
+    subject = relationship("IGaccessPackageSubject",
+        secondary=lnk_ig_ap_assignment_request_target,
+        back_populates="assignmentRequestsAsTarget")
+
+    requestor = relationship("IGaccessPackageSubject",
+        secondary=lnk_ig_ap_assignment_request_requestor,
+        back_populates="assignmentRequests")
+
+    accessPackage = relationship("IGaccessPackage",
+        secondary=lnk_ig_ap_assignment_request,
+        back_populates="assignmentRequests")
+
+
+class IGaccessPackageAssignmentResourceRole(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageAssignmentResourceRoles"
+    id = Column(Text, primary_key=True)
+    originId = Column(Text)
+    originSystem = Column(Text)
+    status = Column(Text)
+    assignment = relationship("IGaccessPackageAssignment",
+        secondary=lnk_ig_ap_assignment_resource_role,
+        back_populates="assignmentResourceRoles")
+
+
+class IGaccessPackageSubject(Base, SerializeMixin):
+    __tablename__ = "IGaccessPackageSubjects"
+    connectedOrganizationId = Column(Text)
+    id = Column(Text, primary_key=True)
+    objectId = Column(Text, primary_key=True)
+    altSecId = Column(Text)
+    displayName = Column(Text)
+    principalName = Column(Text)
+    email = Column(Text)
+    onPremisesSecurityIdentifier = Column(Text)
+    type = Column(Text)
+    subjectType = Column(Text)
+    subjectLifecycle = Column(Text)
+    cleanupScheduledDateTime = Column(DateTime)
+    createdDateTime = Column(DateTime)
+    assignmentRequestsAsTarget = relationship("IGaccessPackageAssignmentRequest",
+        secondary=lnk_ig_ap_assignment_request_target,
+        back_populates="subject")
+
+    assignmentRequests = relationship("IGaccessPackageAssignmentRequest",
+        secondary=lnk_ig_ap_assignment_request_requestor,
+        back_populates="requestor")
+
+    assignments = relationship("IGaccessPackageAssignment",
+        secondary=lnk_ig_ap_assignment_target,
+        back_populates="subject")
+
+
+class AZroleDefinition(Base, SerializeMixin):
+    __tablename__ = 'AZroleDefinitions'
+
+    id = Column(Text, primary_key=True)
+    name = Column(Text)
+    type = Column(Text)
+    role_name = Column(Text)
+    description = Column(Text)
+    role_type = Column(Text)
+    created_on = Column(DateTime)
+    permissions = Column(JSON)
+
+class AZroleAssignment(Base, SerializeMixin):
+    __tablename__ = 'AZroleAssignments'
+
+    id = Column(Text, primary_key=True)
+    name = Column(Text)
+    type = Column(Text)
+    scope = Column(Text)
+    role_definition_id = Column(Text, ForeignKey("AZroleDefinitions.id"))
+    principal_id = Column(Text)
+    principal_type = Column(Text)
+    description = Column(Text)
+    condition = Column(Text)
+    condition_version = Column(Text)
+    created_on = Column(DateTime)
+    delegated_managed_identity_resource_id = Column(Text)
+
+    group = relationship("Group",
+        secondary=lnk_az_roleassignment_group,
+        back_populates="azRoleAssignments")
+
+    user = relationship("User",
+        secondary=lnk_az_roleassignment_user,
+        back_populates="azRoleAssignments")
+
+    serviceprincipal = relationship("ServicePrincipal",
+        secondary=lnk_az_roleassignment_serviceprincipal,
+        back_populates="azRoleAssignments")
+
+class AZsubscription(Base, SerializeMixin):
+    __tablename__ = 'AZsubscriptions'
+
+    id = Column(Text, primary_key=True)
+    subscription_id = Column(Text)
+    display_name = Column(Text)
+    state = Column(Text)
+    subscription_policies = Column(JSON)
+    authorization_source = Column(Text)
+
+class AZmanagementGroup(Base, SerializeMixin):
+    __tablename__ = 'AZmanagementGroups'
+
+    id = Column(Text, primary_key=True)
+    name = Column(Text)
+    type = Column(Text)
+    display_name = Column(Text)
+    tenant_id = Column(Text)
+    details = Column(JSON)
+
+class AZroleEligibilityScheduleInstance(Base, SerializeMixin):
+    __tablename__ = 'AZroleEligibilityScheduleInstances'
+
+    id = Column(Text, primary_key=True)
+    name = Column(Text)
+    type = Column(Text)
+    role_definition_id = Column(Text, ForeignKey("AZroleDefinitions.id"))
+    principal_id = Column(Text)
+    principal_type = Column(Text)
+    scope = Column(Text)
+    role_eligibility_schedule_id = Column(Text)
+    status = Column(Text)
+    start_date_time = Column(DateTime)
+    end_date_time = Column(DateTime)
+    member_type = Column(Text)
+    condition = Column(Text)
+    condition_version = Column(Text)
+    created_on = Column(DateTime)
+    expanded_properties = Column(JSON)
+
+    group = relationship("Group",
+        secondary=lnk_az_roleassignment_eligible_group,
+        back_populates="azEligibleRoleAssignments")
+
+    user = relationship("User",
+        secondary=lnk_az_roleassignment_eligible_user,
+        back_populates="azEligibleRoleAssignments")
+
+    serviceprincipal = relationship("ServicePrincipal",
+        secondary=lnk_az_roleassignment_eligible_serviceprincipal,
+        back_populates="azEligibleRoleAssignments")
+
+class AZresource(Base, SerializeMixin):
+    __tablename__ = 'AZresources'
+
+    id = Column(Text, primary_key=True)
+    name = Column(Text)
+    type = Column(Text)
+    type_display_name = Column(Text)
+    resource_group = Column(Text)
+    location_display_name = Column(Text)
+    subscription_display_name = Column(Text)
+    kind = Column(Text)
+    location = Column(Text)
+    subscription_id = Column(Text, ForeignKey("AZsubscriptions.id"))
+    tags = Column(JSON)
+    extended_location = Column(JSON)
 
 
 def parse_db_argument(dbarg):
