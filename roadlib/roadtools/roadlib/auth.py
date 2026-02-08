@@ -117,7 +117,6 @@ class Authentication():
         """
         self.user_agent = self.lookup_user_agent(useragent)
 
-<<<<<<< Updated upstream
     def get_redirect_for_client(self, client_id, interactive=False, broker=False):
         """
         Try to resolve a valid redirect URI for a client, using roadtx lookup if available.
@@ -128,14 +127,13 @@ class Authentication():
             return utils.find_redirurl_for_client(client_id, interactive=interactive, broker=broker)
         except Exception:
             return 'https://login.microsoftonline.com/common/oauth2/nativeclient'
-=======
+
     def set_custom_headers(self, headers_dict):
         """
         Sets custom headers to include in all HTTP requests
         """
         if headers_dict:
             self.custom_headers = headers_dict
->>>>>>> Stashed changes
 
     def user_discovery_v1(self, username):
         """
