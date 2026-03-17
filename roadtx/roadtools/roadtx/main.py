@@ -706,6 +706,9 @@ def main():
     intauth_parser.add_argument('--force-mfa',
                                 action='store_true',
                                 help='Force MFA during authentication')
+    intauth_parser.add_argument('--force-ngcmfa',
+                                 action='store_true',
+                                 help='Force NGC MFA (fresh MFA) during authentication')
     intauth_parser.add_argument('--pkce',
                                 action='store_true',
                                 help='Use PKCE during authentication')
@@ -1580,6 +1583,8 @@ def main():
             auth.set_cae()
         if args.force_mfa:
             auth.set_force_mfa()
+        if args.force_ngcmfa:
+            auth.set_force_ngcmfa()
         if args.scope:
             auth.set_scope(args.scope)
         # Intercept if custom UA is set
