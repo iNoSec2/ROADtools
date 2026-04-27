@@ -38,6 +38,23 @@
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
     </mat-expansion-panel>
+
+    <mat-expansion-panel *ngIf="group.memberOfRole.length > 0" expanded>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          Role memberships ({{ group.memberOfRole.length }})
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <table *ngIf="group.memberOfRole.length > 0" mat-table [dataSource]="group.memberOfRole">
+        <mat-text-column name="displayName"></mat-text-column>
+        <mat-text-column name="description"></mat-text-column>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumnsRoles"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumnsRoles;"></tr>
+      </table>
+    </mat-expansion-panel>
+
     <mat-expansion-panel *ngIf="group.ownerUsers.length > 0"  expanded>
       <mat-expansion-panel-header>
         <mat-panel-title>

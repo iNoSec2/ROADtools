@@ -43,10 +43,10 @@ export class ServicePrincipalsdialogInitComponent implements OnInit {
   providers: [DatabaseService]
 })
 export class ServicePrincipalsdialogComponent {
-  public displayedColumns: string[] = ['displayName', 'description']
-  public displayedColumnsOwners: string[] = ['displayName', 'userPrincipalName']
-  public displayedColumnsAppRoles: string[] = ['value','displayName', 'description', 'id', 'allowedMemberTypes']
-  public displayedColumnsOAuth2: string[] = ['value', 'userConsentDisplayName','userConsentDescription', 'adminConsentDisplayName', 'adminConsentDescription', 'id', 'type']
+  public displayedColumns: string[] = ['displayName', 'description'];
+  public displayedColumnsOwners: string[] = ['displayName', 'userPrincipalName'];
+  public displayedColumnsAppRoles: string[] = ['value','displayName', 'description', 'id', 'allowedMemberTypes'];
+  public displayedColumnsOAuth2: string[] = ['value', 'userConsentDisplayName','userConsentDescription', 'adminConsentDisplayName', 'adminConsentDescription', 'id', 'type'];
   public displayedColumnsAppRolesAssigned: string[] =  ['pname', 'ptype', 'value', 'desc'];
   public displayedColumnsAppRolesAssignedTo: string[] =  ['pname', 'ptype', 'value', 'app', 'desc'];
   public displayedColumnsAccessPackage: string[] = ['packageName', 'resources', 'approval', 'duration'];

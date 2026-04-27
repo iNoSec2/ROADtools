@@ -45,11 +45,12 @@ export class GroupsdialogInitComponent implements OnInit {
   providers: [DatabaseService]
 })
 export class GroupsdialogComponent {
-  public displayedColumns: string[] = ['displayName', 'description']
-  public displayedColumnsUsers: string[] = ['displayName', 'userPrincipalName', 'userType']
-  public displayedColumnsServicePrincipal: string[] = ['displayName', 'servicePrincipalType']
-  public displayedColumnsOwners: string[] = ['displayName', 'userPrincipalName']
+  public displayedColumns: string[] = ['displayName', 'description'];
+  public displayedColumnsUsers: string[] = ['displayName', 'userPrincipalName', 'userType'];
+  public displayedColumnsServicePrincipal: string[] = ['displayName', 'servicePrincipalType'];
+  public displayedColumnsOwners: string[] = ['displayName', 'userPrincipalName'];
   public displayedColumnsDevices: string[] = ['displayName', 'deviceModel', 'deviceOSType', 'deviceTrustType'];
+  public displayedColumnsRoles: string[] = ['displayName', 'description'];
   public pimMemberColumns: string[] = ['subject', 'duration', 'status'];
   public pimOwnerColumns: string[] = ['subject', 'duration', 'status'];
   public showPortalLink: boolean;
