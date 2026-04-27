@@ -1351,6 +1351,51 @@ class Authentication():
                     return
                 return nonce
 
+    def get_fido_challenge(self):
+        """
+        Get FIDO challenge from login page configuration
+        """
+        params = {
+            'resource': self.resource_uri,
+            'client_id': self.client_id,
+            'response_type': 'code',
+            'haschrome': '1',
+            'redirect_uri': 'https://login.microsoftonline.com/common/oauth2/nativeclient',
+            'client-request-id': str(uuid.uuid4()),
+            'x-client-SKU': 'PCL.Desktop',
+            'x-client-Ver': '3.19.7.16602',
+            'x-client-CPU': 'x64',
+            'x-client-OS': 'Microsoft Windows NT 10.0.19569.0',
+            'site_id': 501358,
+            'mscrid': str(uuid.uuid4())
+        }
+        headers = {
+            'User-Agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; Win64; x64; Trident/7.0; .NET4.0C; .NET4.0E)',
+            'UA-CPU': 'AMD64',
+        }
+        res = self.requests_get('https://login.microsoftonline.com/Common/oauth2/authorize', params=params, headers=headers, allow_redirects=False)
+        if self.debug:
+            with open('roadtools.debug.html','w') as outfile:
+                outfile.write(str(res.headers))
+                outfile.write('------\n\n\n-----')
+                outfile.write(res.content.decode('utf-8'))
+        # Try to find SSO nonce in json config
+        startpos = res.content.find(b'$Config=')
+        stoppos = res.content.find(b'//]]></script>')
+        if startpos == -1 or stoppos == -1:
+            print('No redirect or nonce config was returned!')
+            return
+        else:
+            jsonbytes = res.content[startpos+8:stoppos-2]
+            try:
+                jdata = json.loads(jsonbytes)
+            except json.decoder.JSONDecodeError:
+                print('Failed to parse config JSON')
+            if not 'sFidoChallenge' in jdata:
+                print('No fido challenge')
+                return
+            fidochallenge = jdata['sFidoChallenge']
+            return fidochallenge
 
     def authenticate_with_prt_cookie(self, cookie, context=None, derived_key=None, verify_only=False, sessionkey=None, redirurl=None, return_code=False):
         """
@@ -1556,6 +1601,9 @@ class Authentication():
         auth_parser.add_argument('--prt-init',
                                  action='store_true',
                                  help='Initialize Primary Refresh Token authentication flow (get nonce)')
+        auth_parser.add_argument('--fido-init',
+                                 action='store_true',
+                                 help='Initialize FIDO2 authentication flow (get challenge)')
         auth_parser.add_argument('--prt',
                                  action='store',
                                  help='Primary Refresh Token')
@@ -1943,6 +1991,11 @@ class Authentication():
                 nonce = self.get_srv_challenge_nonce()
                 if nonce:
                     print(f'Requested nonce from server to use with ROADtoken: {nonce}')
+                return False
+            if args.fido_init:
+                challenge = self.get_fido_challenge()
+                if challenge:
+                    print(f'Requested challenge from server to use with windows hello script: {challenge}')
                 return False
             if args.prt_cookie:
                 derived_key = self.ensure_binary_derivedkey(args.derived_key)
