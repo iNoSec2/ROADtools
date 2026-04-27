@@ -224,10 +224,10 @@
         <mat-panel-title>
           <div class="role-header">
             <span class="role-name">Eligible Members ({{getEligibleAssignments(getRoleDefinition('Member')).length}})</span>
-            <span class="approval-badge" *ngIf="requiresGroupRoleApproval(getRoleDefinition('Member'))">
+            <span [ngClass]="blueteam ? 'approval-badge blueteam' : 'approval-badge'" *ngIf="requiresGroupRoleApproval(getRoleDefinition('Member'))">
               Approval Required
             </span>
-            <span class="approval-badge no-approval" *ngIf="!requiresGroupRoleApproval(getRoleDefinition('Member'))">
+            <span [ngClass]="blueteam ? 'approval-badge no-approval blueteam' : 'approval-badge no-approval'" *ngIf="!requiresGroupRoleApproval(getRoleDefinition('Member'))">
               No Approval
             </span>
           </div>
@@ -295,10 +295,10 @@
         <mat-panel-title>
           <div class="role-header">
             <span class="role-name">Eligible Owners ({{getEligibleAssignments(getRoleDefinition('Owner')).length}})</span>
-            <span class="approval-badge" *ngIf="requiresGroupRoleApproval(getRoleDefinition('Owner'))">
+            <span [ngClass]="blueteam ? 'approval-badge blueteam' : 'approval-badge'" *ngIf="requiresGroupRoleApproval(getRoleDefinition('Owner'))">
               Approval Required
             </span>
-            <span class="approval-badge no-approval" *ngIf="!requiresGroupRoleApproval(getRoleDefinition('Owner'))">
+            <span [ngClass]="blueteam ? 'approval-badge no-approval blueteam' : 'approval-badge no-approval'" *ngIf="!requiresGroupRoleApproval(getRoleDefinition('Owner'))">
               No Approval
             </span>
           </div>
@@ -410,8 +410,8 @@
     <ng-container matColumnDef="approval">
       <th mat-header-cell *matHeaderCellDef>Approval</th>
       <td mat-cell *matCellDef="let row">
-        <span *ngIf="utils.requiresApproval(row.roleDefinition) === true" class="approval-required">Required</span>
-        <span *ngIf="utils.requiresApproval(row.roleDefinition) === false" class="approval-not-required">Not required</span>
+        <span *ngIf="utils.requiresApproval(row.roleDefinition) === true" [ngClass]="blueteam ? 'approval-required blueteam' : 'approval-required'">Required</span>
+        <span *ngIf="utils.requiresApproval(row.roleDefinition) === false" [ngClass]="blueteam ? 'approval-not-required blueteam' : 'approval-not-required'">Not required</span>
         <span *ngIf="utils.requiresApproval(row.roleDefinition) === null">-</span>
       </td>
     </ng-container>

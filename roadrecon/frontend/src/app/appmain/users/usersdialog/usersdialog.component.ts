@@ -61,7 +61,7 @@ export class UsersdialogComponent {
   public displayedColumnsServicePrincipals: string[] = ['displayName', 'publisherName', 'microsoftFirstParty', 'passwordCredentials', 'keyCredentials', 'appRoles', 'oauth2Permissions'];
   public displayedColumnsDevices: string[] = ['displayName', 'deviceManufacturer', 'accountEnabled', 'deviceModel', 'deviceOSType', 'deviceOSVersion', 'deviceTrustType', 'isCompliant', 'isManaged', 'isRooted'];
   public displayedColumnsApplications: string[] = ['displayName', 'passwordCredentials', 'keyCredentials', 'appRoles', 'oauth2Permissions'];
-  public displayedColumnsPolicies: string[] = ['displayName', 'policyScope', 'policyConditions', 'controls', 'policyDetail'];
+  public displayedColumnsPolicies: string[] = ['displayName', 'policyScope', 'policyConditions', 'controls'];
   public displayedColumnsPim: string[] = ['resourceType', 'resourceAndRole', 'assignmentState', 'approval', 'duration'];
   public displayedColumnsAccessPackage: string[] = ['packageName', 'resources', 'approval', 'duration'];
   public displayedColumnsAzureRole: string[] = ['role', 'scopeType', 'scopeDetails'];
@@ -75,15 +75,18 @@ export class UsersdialogComponent {
   public azureRoleAssignments: AzureRoleAssignment[] = [];
   public resolvedResources: Map<string, string> = new Map(); // Cache for resolved resource names
   public isLoadingResources: boolean = false;
+  public blueteam: boolean = false;
   @ViewChild(MatSort, {static: true}) sort: MatSort;
   constructor(
     private service: DatabaseService,
     public dialogRef: MatDialogRef<UsersdialogComponent>,
     public utils: UtilitiesService,
+    private localSt:LocalStorageService,
     @Inject(MAT_DIALOG_DATA) public data: {user: UsersItem, showPortalLink: boolean}
   ) {
     this.user = data.user;
     this.showPortalLink = data.showPortalLink;
+    this.blueteam = this.localSt.retrieve('blueteam');
     this.service.getUserPolicies(this.user.objectId).subscribe((data: PolicyItem[]) => this.policies = data);
     this.service.getNetworkLocations().subscribe((data: NetworkLocationList) => this.policyLocations = data);
     this.service.getUserPIMassignments(this.user.objectId).subscribe((data: PIMRoleAssignment[]) => this.PIMgroupAssignments = data);

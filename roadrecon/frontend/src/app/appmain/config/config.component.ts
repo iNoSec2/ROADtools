@@ -13,6 +13,8 @@ export class ConfigComponent implements OnInit {
   public portallinks;
   @LocalStorage()
   public paging;
+  @LocalStorage()
+  public blueteam;
 
   constructor() { }
 

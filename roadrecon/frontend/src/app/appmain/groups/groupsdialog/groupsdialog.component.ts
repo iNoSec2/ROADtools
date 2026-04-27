@@ -58,6 +58,7 @@ export class GroupsdialogComponent {
   public displayedColumnsAzureRole: string[] = ['role', 'scopeType', 'scopeDetails'];
   public pimGroupDetails: PIMResource | null = null;
   public azureRoleAssignments: AzureRoleAssignment[] = [];
+  public blueteam: boolean = false;
 
   @ViewChild(MatSort, {static: true}) sort: MatSort;
   constructor(
@@ -70,7 +71,7 @@ export class GroupsdialogComponent {
     this.showPortalLink = this.localSt.retrieve('portallinks');
     this.service.getGroupPIMResource(this.group.objectId).subscribe((data: PIMResource) => this.pimGroupDetails = data);
     this.service.getGroupAzureRoleAssignments(this.group.objectId).subscribe((data: AzureRoleAssignment[]) => this.azureRoleAssignments = data);
-
+    this.blueteam = this.localSt.retrieve('blueteam');
   }
   getAssignmentSubject(assignment: PIMRoleAssignment): { subject: any; type: 'User' | 'Group' | 'ServicePrincipal' } | null {
     if (assignment.subjectUser && assignment.subjectUser.length > 0) {
