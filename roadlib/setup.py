@@ -1,6 +1,6 @@
 from setuptools import setup, find_namespace_packages
 setup(name='roadlib',
-      version='1.6.0',
+      version='1.7.0',
       description='ROADtools common components library',
       author='Dirk-jan Mollema',
       author_email='dirkjan@outsidersecurity.nl',
@@ -16,7 +16,7 @@ setup(name='roadlib',
           'Programming Language :: Python :: 3.13',
       ],
       packages=find_namespace_packages(include=['roadtools.*']),
-      install_requires=['requests', 'cryptography', 'sqlalchemy>=1.4', 'pyjwt>=2.0'],
+      install_requires=['requests', 'cryptography', 'sqlalchemy>=1.4', 'pyjwt>=2.0', 'cbor2'],
       extras_require={
         "async": ["aiohttp"],
       },
