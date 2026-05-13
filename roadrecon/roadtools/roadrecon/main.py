@@ -45,12 +45,24 @@ def main():
 
     # Construct authentication module options
     auth = Authentication()
-    auth_parser = subparsers.add_parser('auth', help='Authenticate to Azure AD')
+    auth_parser = subparsers.add_parser('auth', help='Authenticate to Azure AD / Entra ID')
     auth.get_sub_argparse(auth_parser, for_rr=True)
 
     # Construct gather module options (imported from gather module)
-    gather_parser = subparsers.add_parser('gather', aliases=['dump'], help='Gather Azure AD information')
+    gather_parser = subparsers.add_parser('gather', aliases=['dump'], help='Gather Azure AD / Entra ID information')
     getgatherargs(gather_parser)
+
+    iggather_parser = subparsers.add_parser('iggather', aliases=['igdump'], help='Gather Identity Governance information')
+    getgatherargs(iggather_parser)
+
+    pimgather_parser = subparsers.add_parser('pimgather', aliases=['pimdump'], help='Gather Privileged Identity Management information')
+    getgatherargs(pimgather_parser)
+
+    azgather_parser = subparsers.add_parser('azgather', aliases=['azdump'], help='Gather Azure RM access and resources')
+    getgatherargs(azgather_parser)
+
+    gatherall_parser = subparsers.add_parser('gatherall', aliases=['dumpall'], help='Gather data via all available APIs')
+    getgatherargs(gatherall_parser)
 
     # Construct GUI options
     gui_parser = subparsers.add_parser('gui', help='Launch the web-based GUI')
@@ -128,6 +140,31 @@ def main():
     elif args.command == 'gather' or args.command == 'dump':
         from roadtools.roadrecon.gather import main as gathermain
         gathermain(args)
+    elif args.command == 'iggather' or args.command == 'igdump':
+        from roadtools.roadrecon.iggather import main as iggathermain
+        iggathermain(args)
+    elif args.command == 'azgather' or args.command == 'azdump':
+        from roadtools.roadrecon.azgather import main as azgathermain
+        azgathermain(args)
+    elif args.command == 'pimgather' or args.command == 'pimdump':
+        from roadtools.roadrecon.pimgather import main as pimgathermain
+        pimgathermain(args)
+    elif args.command == 'gatherall':
+        if not args.autotoken:
+            print('--autotoken is required for gatherall (suggested client ID: Azure CLI)')
+            return
+        from roadtools.roadrecon.gather import main as gathermain
+        from roadtools.roadrecon.iggather import main as iggathermain
+        from roadtools.roadrecon.pimgather import main as pimgathermain
+        from roadtools.roadrecon.azgather import main as azgathermain
+        print('Enumerating AAD Graph')
+        gathermain(args)
+        print('Enumerating IG data')
+        iggathermain(args)
+        print('Enumerating PIM data')
+        pimgathermain(args)
+        print('Enumerating Azure data')
+        azgathermain(args)
     elif args.command == 'plugin':
         # Dynamic import
         plugin_module = importlib.import_module('roadtools.roadrecon.plugins.{}'.format(args.plugin))
