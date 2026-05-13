@@ -4,13 +4,16 @@ import json
 import os
 import sys
 import time
-import traceback
 import warnings
+import re
+from multidict import CIMultiDict
 
 import aiohttp
-import requests
+from sqlalchemy import bindparam, func, text
+from sqlalchemy.dialects.postgresql import insert as pginsert
+from sqlalchemy.orm import sessionmaker
+
 import roadtools.roadlib.metadef.database as database
-#from roadlib.metadef.database import Domain
 from roadtools.roadlib.auth import Authentication
 from roadtools.roadrecon.plugins import policyanalysis
 from roadtools.roadlib.metadef.database import (
@@ -23,10 +26,6 @@ from roadtools.roadlib.metadef.database import (
     lnk_group_member_group, lnk_group_member_serviceprincipal,
     lnk_group_member_user, lnk_group_owner_serviceprincipal,
     lnk_group_owner_user)
-from sqlalchemy import bindparam, func, text
-from sqlalchemy.dialects.postgresql import insert as pginsert
-from sqlalchemy.orm import sessionmaker
-from datetime import datetime
 
 warnings.simplefilter('ignore')
 token = None
@@ -46,6 +45,78 @@ MAX_GROUPS = 3000
 MAX_REQ_PER_SEC = 600.0
 GATHER_RESOURCE = 'https://graph.windows.net'
 
+class BatchResponse(aiohttp.ClientResponse):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._unpacked_body = None
+
+    async def read(self):
+        """Unpack the multipart batch on the first read and cache it."""
+        if self._unpacked_body is None:
+            # Use MultipartReader to parse the response
+            reader = aiohttp.MultipartReader.from_response(self)
+            part = await reader.next()
+
+            if part and part.headers.get('Content-Type') == 'application/http':
+                inner_raw = await part.read()
+
+                # Split into Status Line, Headers, and Body
+                # The first empty line (\r\n\r\n) separates headers from body
+                header_block, self._unpacked_body = inner_raw.split(b'\r\n\r\n', 1)
+
+                # Split headers into lines
+                header_lines = header_block.decode('utf-8').split('\r\n')
+                status_line = header_lines.pop(0) # e.g. "HTTP/1.1 200 OK"
+
+                # Update Status Code
+                match = re.search(r'HTTP/\d\.\d\s+(\d{3})', status_line)
+                if match:
+                    self.status = int(match.group(1))
+
+                # Parse Headers into a MultiDict
+                new_headers = CIMultiDict()
+                for line in header_lines:
+                    if ':' in line:
+                        k, v = line.split(':', 1)
+                        new_headers.add(k.strip(), v.strip())
+
+                self._headers = new_headers
+            else:
+                self._unpacked_body = await super().read()
+            await reader.release()
+            await self.release()
+        return self._unpacked_body
+
+    async def json(self, **kwargs):
+        return json.loads(await self.read())
+
+    async def text(self, encoding='utf-8'):
+        return (await self.read()).decode(encoding)
+
+class BatchSession(aiohttp.ClientSession):
+    def __init__(self, *args, **kwargs):
+        # Tell the session to use our transparent response class
+        kwargs['response_class'] = BatchResponse
+        super().__init__(*args, **kwargs)
+
+    def get(self, url, **kwargs):
+        # Customize headers or URL
+        urlparts = url.split('/')
+        reqheaders = kwargs.get('headers', {})
+        reqheaders['Content-Type'] = 'multipart/mixed; boundary=batch_request_boundary'
+        body = f'''--batch_request_boundary
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+GET {url} HTTP/1.1
+
+--batch_request_boundary--'''
+        kwargs['headers'] = reqheaders
+        kwargs['data'] = body
+        batchurl = f'https://graph.windows.net/{urlparts[3]}/$batch?api-version=1.61-internal'
+        # Send POST request instead to $batch endpoint
+        return self.post(batchurl, **kwargs)
+
 def mknext(url, prevurl):
     if url.startswith('https://'):
         # Absolute URL
@@ -55,7 +126,7 @@ def mknext(url, prevurl):
         return '/'.join(parts[:4]) + '/' + url + '&api-version=1.61-internal'
     return '/'.join(parts[:-1]) + '/' + url + '&api-version=1.61-internal'
 
-async def dumphelper(url, method=requests.get):
+async def dumphelper(url, method):
     global urlcounter, tokencounter
     nexturl = url
     while nexturl:
@@ -64,13 +135,14 @@ async def dumphelper(url, method=requests.get):
         try:
             urlcounter += 1
             async with method(nexturl, headers=headers) as req:
+                await req.read()
                 # Hold off when rate limit is reached
                 if req.status == 429:
                     if tokencounter > 0:
                         tokencounter -= 10*MAX_REQ_PER_SEC
                         print('Sleeping because of rate-limit hit')
                     continue
-                if req.status != 200:
+                if req.status > 299:
                     # Ignore default users role not being found
                     if req.status == 404 and 'a0b1b346-4d3e-4e8b-98f8-753987be4970' in url:
                         return
@@ -150,11 +222,10 @@ def checktoken():
         if 'originheader' in token:
             auth.set_origin_value(token['originheader'])
         if 'refreshToken' in token:
-            print("- Attempting token refresh -")
-            token = auth.authenticate_with_refresh(token)
+            print("Access token expired - fetching new token using refresh token")
+            token = auth.authenticate_with_refresh_native(token)
             headers['Authorization'] = '%s %s' % (token['tokenType'], token['accessToken'])
             expiretime = time.time() + token['expiresIn']
-            print('+ Refreshed token +')
             return True
         elif time.time() > expiretime:
             print('Access token is expired, but no access to refresh token! Dumping will fail')
@@ -168,13 +239,14 @@ async def dumpsingle(url, method):
     try:
         urlcounter += 1
         async with method(url, headers=headers) as res:
+            await res.read()
             if res.status == 429:
                 if tokencounter > 0:
                     tokencounter -= 10*MAX_REQ_PER_SEC
                     print('Sleeping because of rate-limit hit')
                 obj = await dumpsingle(url, method)
                 return obj
-            if res.status != 200:
+            if res.status > 299:
                 # This can happen
                 if res.status == 404 and 'applicationRefs' in url:
                     return
@@ -535,6 +607,12 @@ async def run(args):
     headers = {
         'Authorization': '%s %s' % (token['tokenType'], token['accessToken'])
     }
+    if args.evade:
+        args.user_agent = 'Microsoft ADO.NET Data Services'
+        aiostrategy = BatchSession
+    else:
+        aiostrategy = aiohttp.ClientSession
+
     if args.user_agent:
         # Alias support, get temp auth object
         auth = Authentication()
@@ -542,6 +620,17 @@ async def run(args):
         headers['User-Agent'] = auth.user_agent
         # Store this in the token as well
         token['useragent'] = auth.user_agent
+
+    # Handle proxy
+    verify_cert = True
+    proxyurl = None
+    # if args.proxy:
+    #     proxyurl = f'{args.proxy_type}://{args.proxy}'
+    #     if not args.secure:
+    #         verify_cert = False
+    # # Disable TLS cert validation
+    # if args.insecure:
+    #     verify_cert = False
 
     if not checktoken():
         return
@@ -555,7 +644,7 @@ async def run(args):
     engine = database.init(destroy_db, dburl=dburl)
     dumper = DataDumper(tenantid, '1.61-internal', engine=engine)
     if not args.skip_first_phase:
-        async with aiohttp.ClientSession() as ahsession:
+        async with aiostrategy(proxy=proxyurl, connector=aiohttp.TCPConnector(ssl=verify_cert)) as ahsession:
             print('Starting data gathering phase 1 of 2 (collecting objects)')
             dumper.ahsession = ahsession
             tasks = []
@@ -646,7 +735,7 @@ async def run(args):
     totaldevices = dbsession.query(func.count(Device.objectId)).scalar()
     if totalgroups > MAX_GROUPS:
         print('Gathered {0} groups, switching to 3-phase approach for efficiency'.format(totalgroups))
-    async with aiohttp.ClientSession() as ahsession:
+    async with aiostrategy(proxy=proxyurl, connector=aiohttp.TCPConnector(ssl=verify_cert)) as ahsession:
         if totalgroups > MAX_GROUPS:
             print('Starting data gathering phase 2 of 3 (collecting properties and relationships)')
         else:
@@ -676,7 +765,7 @@ async def run(args):
     tasks = []
     if totalgroups > MAX_GROUPS:
         print('Starting data gathering phase 3 of 3 (collecting group memberships and device owners)')
-        async with aiohttp.ClientSession() as ahsession:
+        async with aiostrategy(proxy=proxyurl, connector=aiohttp.TCPConnector(ssl=verify_cert)) as ahsession:
             dumper.ahsession = ahsession
             queue = asyncio.Queue(maxsize=100)
             # Start the workers
@@ -736,6 +825,14 @@ def getargs(gather_parser):
     gather_parser.add_argument('--skip-azure',
                                action='store_true',
                                help='Skip Azure PIM collection since it is slooooow')
+    gather_parser.add_argument('--evade',
+                               action='store_true',
+                               help='Evade common AAD Graph enumeration detections')
+    # gather_parser.add_argument('-p', '--proxy', action='store', help="Proxy requests through a proxy (format: proxyip:port). Ignores TLS validation if specified, unless --secure is used.")
+    # gather_parser.add_argument('-pt', '--proxy-type', action='store', default="http", help="Proxy type to use. Supported: http / https. Default: http")
+    # gather_parser.add_argument('-s', '--secure', action='store_true', help="Enforce certificate validation even if using a proxy")
+    # gather_parser.add_argument('-i', '--insecure', action='store_true', help="Do not validate certificates (insecure)")
+
 
 def main(args=None):
     global token, headers, dburl, urlcounter
