@@ -52,6 +52,9 @@ class SeleniumAuthentication():
         self.driver = None
         self.redirurl = redirurl
         self.headless = False
+        self.webauthn = False
+        self.fidoauth = None
+        self.fidoassertion = None
 
     def get_service(self, driverpath):
         # Default expects geckodriver to be in path, but if it exists locally we use that
@@ -171,6 +174,58 @@ class SeleniumAuthentication():
                         response.body = encoding.encode(body, response.headers.get('Content-Encoding', 'identity'))
                         del response.headers['Content-Length']
                         response.headers['Content-Length'] = len(response.body)
+        if self.webauthn and (request.url.startswith('https://login.microsoft.com/') or request.url.startswith('https://login.microsoftonline.com/')):
+            body = encoding.decode(response.body, response.headers.get('Content-Encoding', 'identity'))
+            # Try to find FIDO challenge in json config
+            startpos = body.find(b'$Config=')
+            stoppos = body.find(b'//]]></script>')
+            if startpos == -1 or stoppos == -1:
+                return
+            jsonbytes = body[startpos+8:stoppos-2]
+            try:
+                jdata = json.loads(jsonbytes)
+            except json.decoder.JSONDecodeError:
+                print('Failed to parse config JSON')
+            if not 'sFidoChallenge' in jdata:
+                # print('No fido challenge')
+                return
+            fidochallenge = jdata['sFidoChallenge']
+
+            req_url = jdata['urlPost']
+            if req_url[0] == '/':
+                req_url = 'https://login.microsoftonline.com' + req_url
+            req_headers = {}
+            if not self.fidoassertion:
+                assertion = self.fidoauth.authenticate_with_fido(fidochallenge)
+            else:
+                assertion = self.fidoassertion
+            for reqheader, rhval in request.headers.items():
+                req_headers[reqheader] = rhval
+            if self.auth.user_agent:
+                req_headers['User-Agent'] = self.auth.user_agent
+            req_data = {
+                jdata['sCanaryTokenName']: jdata['canary'],
+                jdata['sFTName']: jdata['sFT'],
+                'lmcCanary': jdata['sCrossDomainCanary'],
+                'ctx': jdata['sCtx'],
+                'hpgrequestid': jdata['sessionId'],
+                'type': "23",
+                'ps': "23",
+                'assertion': json.dumps(assertion)
+            }
+            import html
+            # Send it as an autopost form so we don't need to deal with all the cookies
+            newresp = '<html><head><script>window.onload = function() {  document.getElementById("submitme").submit(); };</script></head>'
+            newresp += f'<body>Give it a second...<form action="{req_url}" id="submitme" method="POST">'
+            for name, val in req_data.items():
+                newresp += f'<input type="hidden" name="{html.escape(name)}" value="{html.escape(val)}" />'
+            newresp += '</form></body></html>'
+            response.body = encoding.encode(newresp.encode('utf-8'), response.headers.get('Content-Encoding', 'identity'))
+            del response.headers['Content-Length']
+            if 'Content-Security-Policy-Report-Only' in response.headers:
+                del response.headers['Content-Security-Policy-Report-Only']
+            response.headers['Content-Length'] = len(response.body)
+
 
     def get_keepass_cred(self, identity, filepath, password):
         '''
@@ -336,6 +391,57 @@ class SeleniumAuthentication():
         self.driver.request_interceptor = interceptor
         self.driver.response_interceptor = self.redir_interceptor
         return self.selenium_login(url, identity=identity, password=password, otpseed=otpseed, keep=keep, capture=capture, federated=federated, devicecode=devicecode)
+
+    def selenium_login_fido(self, url, identity, fidoauth, keep=False, capture=False, singleassertion=None):
+        '''
+        Wrapper for login with software based FIDO key (WHFB/Passkey)
+        '''
+        def interceptor(request):
+            del request.headers['User-Agent']
+            request.headers['User-Agent'] = self.auth.user_agent
+            if request.url.startswith('https://csp.microsoft.com'):
+                request.create_response(
+                    status_code=200,
+                    body=''
+                )
+
+        self.webauthn = True
+        self.fidoauth = fidoauth
+        if singleassertion:
+            try:
+                assertiondata = json.loads(singleassertion)
+            except json.decoder.JSONDecodeError:
+                print('Failed to parse webauthn assertion as JSON')
+                return
+            self.fidoassertion = assertiondata
+        self.driver.request_interceptor = interceptor
+        self.driver.response_interceptor = self.redir_interceptor
+        driver = self.driver
+        driver.get(url)
+        try:
+            els = WebDriverWait(driver, 1200).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "idSIButton9"))
+            if not '?code=' in driver.current_url:
+                # Handle KMSI
+                try:
+                    driver.find_element(By.ID, "idSIButton9").click()
+                except (ElementClickInterceptedException, ElementNotInteractableException):
+                    pass
+                WebDriverWait(driver, 1200).until(lambda d: '?code=' in d.current_url)
+            res = urlparse(driver.current_url)
+            params = parse_qs(res.query)
+            code = params['code'][0]
+            if not keep:
+                driver.close()
+            if capture:
+                return code
+            if self.auth.scope:
+                return self.auth.authenticate_with_code_native_v2(code, self.redirurl)
+            return self.auth.authenticate_with_code_native(code, self.redirurl)
+        except TimeoutException:
+            if not keep:
+                driver.close()
+                raise AuthenticationException('Authentication did not complete within time limit')
+
 
     def selenium_login_regular(self, url, identity=None, password=None, otpseed=None, keep=False, capture=False, federated=False, devicecode=None):
         '''
@@ -651,7 +757,10 @@ class SeleniumAuthentication():
                 res2 = self.auth.requests_post(req2_url, headers=req2_headers, cookies=req2_cookies)
                 if res2.status_code != 200:
                     data = res2.json()
-                    raise AuthenticationException(f'Failed to obtain SPO cookie. Error: {data["error_description"]}')
+                    if 'error_description' in data:
+                        raise AuthenticationException(f'Failed to obtain SPO cookie. Error: {data["error_description"]}')
+                    else:
+                        raise AuthenticationException(f'Failed to obtain SPO cookie. Error: {data}')
                 res = self.auth.requests_post(req_url, allow_redirects=False, headers=req_headers, data=req_data)
 
                 response_headers = dict(res.headers)

@@ -12,8 +12,9 @@ from urllib.parse import urlparse, parse_qs, quote_plus
 from roadtools.roadlib.auth import Authentication, get_data, AuthenticationException
 from roadtools.roadlib.constants import WELLKNOWN_CLIENTS, WELLKNOWN_RESOURCES, WELLKNOWN_USER_AGENTS
 from roadtools.roadlib.deviceauth import DeviceAuthentication
+from roadtools.roadlib.webauthn import EntraIDFIDOAuthenticator, WebAuthnClient
 from roadtools.roadtx.selenium import SeleniumAuthentication
-from roadtools.roadtx.utils import find_redirurl_for_client, parse_encrypted_token
+from roadtools.roadtx.utils import find_redirurl_for_client, parse_encrypted_token, sanitize_name
 from roadtools.roadtx.federation import EncryptedPFX, SAMLSigner, encode_object_guid
 import pyotp
 import requests
@@ -168,6 +169,73 @@ def main():
     winhello_parser.add_argument('--access-token', action='store', help='Access token for device registration service. If not specified, taken from .roadtools_auth')
     winhello_parser.add_argument('-ua', '--user-agent', action='store',
                                  help='Custom user agent to use. Default: Dsreg/10.0 (Windows 10.0.19044.1826)')
+
+    # Webauthn / FIDO2 auth using Selenium - supports software passkeys and Windows Hello keys
+    urlhelp = 'Url to initiate browsing. Will be constructed from below parameters if not supplied.'
+    fidauth_parser = subparsers.add_parser('fidoauth', help='Interactive authentication with Windows Hello / Passkey')
+    fidauth_parser.add_argument('-u', '--username', action='store', metavar='USER', help='User to authenticate')
+    fidauth_parser.add_argument('-url', '--url', '--auth-url', action='store', metavar='URL', help=urlhelp)
+    fidauth_parser.add_argument('-c',
+                                '--client',
+                                action='store',
+                                help=clienthelptext,
+                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+    fidauth_parser.add_argument('-r',
+                                '--resource',
+                                action='store',
+                                help='Resource to authenticate to. Either a full URL or alias (list with roadtx listaliases)',
+                                default='https://graph.windows.net')
+    fidauth_parser.add_argument('-s',
+                                '--scope',
+                                action='store',
+                                help='Scope to use. Will automatically switch to v2.0 auth endpoint if specified. If unsure use -r instead.')
+    fidauth_parser.add_argument('-ru', '--redirect-url', action='store', metavar='URL',
+                                help='Redirect URL used when authenticating (default: chosen automatically based on well-known URLs for first party clients)')
+    fidauth_parser.add_argument('-ua', '--user-agent', action='store',
+                                help='Custom user agent to use. By default the user agent from FireFox is used without modification')
+    fidauth_parser.add_argument('-t',
+                                '--tenant',
+                                action='store',
+                                help='Tenant ID (required for Windows Hello auth')
+    fidauth_parser.add_argument('-hk', '--hello-key', action='store', help='Windows Hello PEM file')
+    fidauth_parser.add_argument('-p', '--passkey', action='store', help='Passkey file to use (.rtpk ROADtools formatted file)')
+    fidauth_parser.add_argument('-a', '--fidoassertion', action='store', help='Webauthn assertion from Windows Hello key')
+    fidauth_parser.add_argument('-i',
+                                '--uid',
+                                action='store',
+                                help='User ID (required for Windows Hello auth')
+    fidauth_parser.add_argument('--tokenfile',
+                                action='store',
+                                help='File to store the credentials (default: .roadtools_auth)',
+                                default='.roadtools_auth')
+    fidauth_parser.add_argument('--tokens-stdout',
+                                action='store_true',
+                                help='Do not store tokens on disk, pipe to stdout instead')
+    fidauth_parser.add_argument('-d', '--driver-path',
+                                action='store',
+                                help='Path to geckodriver file on disk (download from: https://github.com/mozilla/geckodriver/releases)')
+    fidauth_parser.add_argument('-k', '--keep-open',
+                                action='store_true',
+                                help='Do not close the browser window after timeout. Useful if you want to browse online apps with the obtained credentials')
+    fidauth_parser.add_argument('--capture-code',
+                                action='store_true',
+                                help='Do not attempt to redeem any authentication code but print it instead')
+    fidauth_parser.add_argument('--cae',
+                                action='store_true',
+                                help='Request Continuous Access Evaluation tokens (requires use of scope parameter instead of resource)')
+    fidauth_parser.add_argument('--force-mfa',
+                                action='store_true',
+                                help='Force MFA during authentication')
+    fidauth_parser.add_argument('--force-ngcmfa',
+                                 action='store_true',
+                                 help='Force NGC MFA (fresh MFA) during authentication')
+    fidauth_parser.add_argument('--pkce',
+                                action='store_true',
+                                help='Use PKCE during authentication')
+    fidauth_parser.add_argument('--origin',
+                                action='store',
+                                help='Origin header to use in code redemption (for single page app flows)')
+
 
     # Construct winhello key generation module - included for reference
     # winhello_parser = subparsers.add_parser('genhellokey', help='Generate Windows Hello key')
@@ -1046,6 +1114,17 @@ def main():
     graphrequest_parser.add_argument('-df', '--datafile', action='store', help='File containing JSON data to send with the request')
     graphrequest_parser.add_argument('url', action='store', help='URL to request')
 
+    # Register passkey
+    registerpasskey_parser = subparsers.add_parser('registerpasskey', help='Register passkey over the Microsoft Graph')
+    registerpasskey_parser.add_argument('--user', '-u', action='store', help='Target user to provision the passkey on')
+    registerpasskey_parser.add_argument('--name', '-n', action='store', default='roadtx', help='Passkey name (default: roadtx)')
+    registerpasskey_parser.add_argument('-pf', '--passkey-file', action='store', help='Passkey file name (default: based on name specified above)')
+    registerpasskey_parser.add_argument('--access-token', action='store', help='Access token for Microsoft Graph. If not specified, taken from .roadtools_auth')
+    registerpasskey_parser.add_argument('-ua', '--user-agent', action='store',
+                                        help='Custom user agent to use. Default: python-requests user agent is used')
+    registerpasskey_parser.add_argument('-f', '--tokenfile', action='store', help='File to read the token from (default: .roadtools_auth)', default='.roadtools_auth')
+    registerpasskey_parser.add_argument('--aaguid', action='store', help='AAGUID to use for passkey (default: MS Authenticator Android app with GUID de1e552d-db1d-4423-a619-566b625cdc84)', default='de1e552d-db1d-4423-a619-566b625cdc84')
+
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(1)
@@ -1616,6 +1695,109 @@ def main():
         elif result:
             auth.outfile = args.tokenfile
             auth.save_tokens(args)
+    elif args.command == 'fidoauth':
+        auth.set_client_id(args.client)
+        auth.set_resource_uri(args.resource)
+        auth.set_user_agent(args.user_agent)
+        auth.tenant = args.tenant
+        auth.use_pkce = args.pkce
+        if args.origin:
+            auth.set_origin_value(args.origin, args.redirect_url)
+        if args.cae:
+            auth.set_cae()
+        if args.force_mfa:
+            auth.set_force_mfa()
+        if args.force_ngcmfa:
+            auth.set_force_ngcmfa()
+        if args.scope:
+            auth.set_scope(args.scope)
+        # Intercept if custom UA is set
+        custom_ua = args.user_agent is not None
+        if args.redirect_url:
+            redirect_url = args.redirect_url
+        else:
+            redirect_url = find_redirurl_for_client(auth.client_id, interactive=False)
+        selauth = SeleniumAuthentication(auth, deviceauth, redirect_url, proxy=args.proxy, proxy_type=args.proxy_type)
+        if args.url:
+            url = args.url
+        else:
+            url = auth.build_auth_url(redirect_url, 'code', auth.scope)
+        service = selauth.get_service(args.driver_path)
+        if not service:
+            return
+        selauth.driver = selauth.get_webdriver(service, intercept=True)
+        if args.hello_key:
+            deviceauth.loadhellokey(args.hello_key)
+            if not args.uid or not args.tenant or not '-' in args.tenant:
+                print('User ID (GUID) and tenant ID (GUID) must be supplied')
+                return
+            fidoauth = EntraIDFIDOAuthenticator(deviceauth=deviceauth, tenant_id=args.tenant, user_id=args.uid)
+        elif args.passkey:
+            client, passkey_data = WebAuthnClient.from_software_passkey(deviceauth, args.passkey)
+            fidoauth = EntraIDFIDOAuthenticator(webauthn_client=client, user_handle=passkey_data['user_handle'])
+        else:
+            print('Hello key or passkey argument is required')
+            return
+
+        result = selauth.selenium_login_fido(url, args.username, fidoauth, capture=args.capture_code, keep=args.keep_open, singleassertion=args.fidoassertion)
+        if args.capture_code:
+            if result:
+                print(f'Captured auth code: {result}')
+            return
+        elif result:
+            auth.outfile = args.tokenfile
+            auth.save_tokens(args)
+    elif args.command == 'registerpasskey':
+        if args.access_token:
+            tokenobject, tokendata = auth.parse_accesstoken(args.access_token)
+        else:
+            try:
+                with codecs.open(args.tokenfile, 'r', 'utf-8') as infile:
+                    tokenobject = json.load(infile)
+                _, tokendata = auth.parse_accesstoken(tokenobject['accessToken'])
+            except FileNotFoundError:
+                print('No auth data found. Ether supply an access token with --access-token or make sure a token is present on disk in .roadtools_auth')
+                return
+        auth.set_user_agent(args.user_agent)
+        headers = {
+            'Authorization': f'Bearer {tokenobject["accessToken"]}'
+        }
+        if args.user:
+            prefix = f'https://graph.microsoft.com/beta/users/{args.user}'
+        else:
+            prefix = 'https://graph.microsoft.com/beta/me'
+        res = auth.requests_get(prefix + '/authentication/fido2Methods/creationOptions(challengeTimeoutInMinutes=10)', headers=headers)
+        data = res.json()
+        # create passkey
+        # print(data)
+        try:
+            userhandle = data['publicKey']['user']['id']
+        except KeyError:
+            print('Error requesting passkey challenge - required data missing')
+            print(data)
+            return
+
+        if args.passkey_file:
+            pkname = args.passkey_file
+        else:
+            pkname = sanitize_name(args.name) + '.rtpk'
+        privkey, passkey_data = WebAuthnClient.create_software_passkey(pkname, user_handle=userhandle)
+        deviceauth.hellokey = privkey
+        fidoauth = EntraIDFIDOAuthenticator(deviceauth, user_handle=userhandle)
+        regdata = fidoauth.register_credential(data['publicKey']['challenge'], None, None, None, rp_id=data['publicKey']['rp']['id'], aaguid=args.aaguid)
+        data = {
+            "displayName": args.name,
+            "publicKeyCredential": regdata
+        }
+        # print(data)
+        res = auth.requests_post(prefix + '/authentication/fido2Methods', json=data, headers=headers)
+        if res.status_code == 201:
+            rdata = res.json()
+            try:
+                pkid = rdata['id']
+                print(f'Passkey registered succesfully with ID {pkid}')
+            except KeyError:
+                print('Passkey registered succesfully - ID not found in response data')
     elif args.command == 'clicodeauth':
         auth.set_client_id(args.client)
         auth.set_resource_uri(args.resource)
@@ -2231,6 +2413,8 @@ def main():
             except json.decoder.JSONDecodeError as ex:
                 print(f'Invalid JSON data provided: {str(ex)}')
                 return
+        else:
+            data = None
         if args.method.upper() == 'GET':
             response = auth.requests_get(args.url, headers=headers)
         elif args.method.upper() == 'POST':

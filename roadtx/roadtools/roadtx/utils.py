@@ -1,6 +1,7 @@
 import os
 import codecs
 import json
+import re
 import base64, binascii, argparse, textwrap, uuid
 
 def find_redirurl_for_client(client, interactive=True, broker=False):
@@ -37,6 +38,9 @@ def b64_d(string):
     return base64.b64decode(string + '=' * (-len(string) % 4))
 def b64_url_d(string):
     return base64.urlsafe_b64decode(string + '=' * (-len(string) % 4))
+
+def sanitize_name(inname):
+    return re.sub('[^A-Za-z0-9]+', '_', inname)
 
 def parse_encrypted_token(rhdata):
     refresh = rhdata.split(".")
