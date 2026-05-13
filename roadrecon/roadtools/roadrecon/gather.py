@@ -12,6 +12,7 @@ import requests
 import roadtools.roadlib.metadef.database as database
 #from roadlib.metadef.database import Domain
 from roadtools.roadlib.auth import Authentication
+from roadtools.roadrecon.plugins import policyanalysis
 from roadtools.roadlib.metadef.database import (
     AdministrativeUnit, Application, ApplicationRef, AppRoleAssignment,
     AuthorizationPolicy, Contact, Device, DirectoryRole, DirectorySetting,
@@ -694,6 +695,13 @@ async def run(args):
                 worker_task.cancel()
 
     dbsession.commit()
+
+    # Auto analyze CA policies
+    print('Data gathering complete - Performing data pre-analysis: calculating CA policy scopes')
+    policyanalysis.dburl = dburl
+    plugin = policyanalysis.PoliciesPlugin(dbsession)
+    plugin.main()
+
     dbsession.close()
 
 def getargs(gather_parser):
