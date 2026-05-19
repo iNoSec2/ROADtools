@@ -183,7 +183,7 @@ def main():
                                 '--client',
                                 action='store',
                                 help=clienthelptext,
-                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     fidauth_parser.add_argument('-r',
                                 '--resource',
                                 action='store',
@@ -253,7 +253,7 @@ def main():
                                 '--client',
                                 action='store',
                                 help=helptext,
-                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     prtauth_parser.add_argument('-r',
                                 '--resource',
                                 action='store',
@@ -580,7 +580,7 @@ def main():
     devauth_parser.add_argument('--client',
                                 action='store',
                                 help=helptext,
-                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     devauth_parser.add_argument('-r',
                                 '--resource',
                                 action='store',
@@ -610,7 +610,7 @@ def main():
                                  '--client',
                                  action='store',
                                  help=clienthelptext,
-                                 default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                 default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     codeauth_parser.add_argument('-p', '--password', action='store', metavar='PASSWORD', help='Password secret of the application if not a public app')
     codeauth_parser.add_argument('-r',
                                  '--resource',
@@ -678,7 +678,7 @@ def main():
                                    '--client',
                                    action='store',
                                    help=clienthelptext,
-                                   default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                   default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     desktopsso_parser.add_argument('-u', '--username', action='store', metavar='USER', help='User to authenticate')
     desktopsso_parser.add_argument('-p', '--password', action='store', metavar='PASSWORD', help='Password of the user')
     desktopsso_parser.add_argument('--krbtoken',
@@ -790,7 +790,7 @@ def main():
                                 '--client',
                                 action='store',
                                 help=clienthelptext,
-                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     intauth_parser.add_argument('-r',
                                 '--resource',
                                 action='store',
@@ -862,7 +862,7 @@ def main():
                                 '--client',
                                 action='store',
                                 help=clienthelptext,
-                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     kdbauth_parser.add_argument('-r',
                                 '--resource',
                                 action='store',
@@ -922,7 +922,7 @@ def main():
                                        '--client',
                                        action='store',
                                        help=helptext,
-                                       default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                       default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     browserprtauth_parser.add_argument('-r',
                                        '--resource',
                                        action='store',
@@ -990,7 +990,7 @@ def main():
                                 '--client',
                                 action='store',
                                 help=clienthelptext,
-                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     injauth_parser.add_argument('-r',
                                 '--resource',
                                 action='store',
@@ -1083,7 +1083,7 @@ def main():
                                 '--client',
                                 action='store',
                                 help=clienthelptext,
-                                default='1b730954-1685-4b74-9bfd-dac224a7b894')
+                                default='04b07795-8ddb-461a-bbee-02f9e1bf7b46')
     cliauth_parser.add_argument('-r',
                                 '--resource',
                                 action='store',
