@@ -292,7 +292,7 @@
       <td mat-cell *matCellDef="let row">
         <span *ngIf="utils.requiresApproval(row.roleDefinition) === true" [ngClass]="blueteam ? 'approval-required blueteam' : 'approval-required'">Required</span>
         <span *ngIf="utils.requiresApproval(row.roleDefinition) === false" [ngClass]="blueteam ? 'approval-not-required blueteam' : 'approval-not-required'">Not required</span>
-        <span *ngIf="utils.requiresApproval(row.roleDefinition) === null">-</span>
+        <span *ngIf="utils.requiresApproval(row.roleDefinition) === null">Unknown</span>
       </td>
     </ng-container>
 
@@ -363,7 +363,7 @@
       <td mat-cell *matCellDef="let row">
         <span *ngIf="utils.requiresApproval(row.roleDefinition) === true" [ngClass]="blueteam ? 'approval-required blueteam' : 'approval-required'">Required</span>
         <span *ngIf="utils.requiresApproval(row.roleDefinition) === false" [ngClass]="blueteam ? 'approval-not-required blueteam' : 'approval-not-required'">Not required</span>
-        <span *ngIf="utils.requiresApproval(row.roleDefinition) === null">-</span>
+        <span *ngIf="utils.requiresApproval(row.roleDefinition) === null">Unknown</span>
       </td>
     </ng-container>
 
@@ -545,111 +545,146 @@
   </mat-expansion-panel>
 </mat-tab>
 
-  <mat-tab label="Policies" *ngIf="policies && policies.length > 0">
-      <div *ngIf="user.userType == 'Guest'" class="mat-elevation-z4 pagedescription">
-    Policy processing for guest users is currently not completely accurate. Policies scoped to guest types are not processed.
-  </div>
-      <table mat-table [dataSource]="policies">
-        <ng-container matColumnDef="displayName">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
-          <td mat-cell *matCellDef="let row"><strong *ngIf="row.policyDetail.State == 'Disabled'">Disabled policy: </strong><strong *ngIf="row.policyDetail.State == 'Reporting'">Report Only policy: </strong>{{row.displayName}}</td>
-        </ng-container>
+<mat-tab label="Policies" *ngIf="policies && policies.length > 0">
+    <div *ngIf="user.userType == 'Guest'" class="mat-elevation-z4 pagedescription">
+      Policy processing for guest users is currently not completely accurate. Policies scoped to guest types are not processed.
+    </div>
+    <table mat-table [dataSource]="policies" class="full-width-table">
 
-        <ng-container matColumnDef="policyScope">
-          <th mat-header-cell *matHeaderCellDef>Applies to</th>
-          <td mat-cell *matCellDef="let row">
-            <div *ngIf="row.policyScope.include.length > 0">
-              Includes: <mat-list><mat-list-item *ngFor="let scope of row.policyScope.include">
-                <span *ngIf="scope.objectType == 'SPECIAL'">{{scope.displayName}} </span>
-                <a *ngIf="scope.objectType != 'SPECIAL'" [routerLink]="['/', scope.objectType.toLowerCase() + 's', scope.objectId]">{{scope.displayName}} </a>
-              </mat-list-item></mat-list>
-            </div>
-            <div *ngIf="row.policyScope.exclude.length > 0">
-              Excludes: <mat-list><mat-list-item *ngFor="let scope of row.policyScope.exclude">
-                <span *ngIf="scope.objectType == 'SPECIAL'">{{scope.displayName}} </span>
-                <a *ngIf="scope.objectType != 'SPECIAL'" [routerLink]="['/', scope.objectType.toLowerCase() + 's', scope.objectId]">{{scope.displayName}} </a><br />
-              </mat-list-item></mat-list>
-            </div>
-          </td>
-        </ng-container>
+      <!-- Name + state -->
+      <ng-container matColumnDef="displayName">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let row">
+          <div class="policy-name">{{row.displayName}}</div>
+          <span *ngIf="row.policyDetail.State == 'Disabled'" class="policy-state-badge state-disabled">Disabled</span>
+          <span *ngIf="row.policyDetail.State == 'Reporting'" class="policy-state-badge state-reporting">Report Only</span>
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="policyConditions">
-          <th mat-header-cell *matHeaderCellDef>Conditions</th>
-          <td mat-cell *matCellDef="let row">
-            <div *ngIf="row.policyDetail.Conditions.ClientTypes && row.policyDetail.Conditions.ClientTypes.Include">
-              Clients: <mat-list><mat-list-item *ngFor="let client of row.policyDetail.Conditions.ClientTypes.Include[0].ClientTypes">
-                {{client}}
-              </mat-list-item></mat-list>
-            </div>
-
-            <div *ngIf="row.policyDetail.Conditions.AuthFlows && row.policyDetail.Conditions.AuthFlows.Include">
-              Authentication flows: <mat-list><mat-list-item *ngFor="let authflow of row.policyDetail.Conditions.AuthFlows.Include[0].AuthFlows">
-                {{authflow}}
-              </mat-list-item></mat-list>
-            </div>
-
-            <div *ngIf="row.policyDetail.Conditions.Locations && row.policyDetail.Conditions.Locations.Include">
-              Including locations: <mat-list><mat-list-item *ngFor="let location of row.policyDetail.Conditions.Locations.Include[0].Locations">
-                <div *ngIf="location == 'All' || location == 'AllTrusted'">{{location}}</div>
-                <div *ngIf="location != 'All' && policyLocations[location]" [matTooltip]="policyLocations[location].ipRanges? policyLocations[location].ipRanges.join(', ') : policyLocations[location].countryCodes.join(', ')">{{policyLocations[location].displayName}}</div>
-                <div *ngIf="location != 'All' && location != 'AllTrusted' && !policyLocations[location]">Unknown location ID {{location}}</div>
-              </mat-list-item></mat-list>
-            </div>
-
-            <div *ngIf="row.policyDetail.Conditions.Locations && row.policyDetail.Conditions.Locations.Exclude">
-              Excluding locations: <mat-list><mat-list-item *ngFor="let location of row.policyDetail.Conditions.Locations.Exclude[0].Locations">
-                <div *ngIf="location == 'All' || location == 'AllTrusted'">{{location}}</div>
-                <div *ngIf="policyLocations[location]" [matTooltip]="policyLocations[location].ipRanges? policyLocations[location].ipRanges.join(', ') : policyLocations[location].countryCodes.join(', ')">{{policyLocations[location].displayName}}</div>
-                <div *ngIf="location != 'All' && location != 'AllTrusted' && !policyLocations[location]">Unknown location ID {{location}}</div>
-              </mat-list-item></mat-list>
-            </div>
-
-            <div *ngIf="row.policyDetail.Conditions.DevicePlatforms && row.policyDetail.Conditions.DevicePlatforms.Include">
-              Including device platforms: <mat-list><mat-list-item *ngFor="let platform of row.policyDetail.Conditions.DevicePlatforms.Include[0].DevicePlatforms">
-                {{platform}}
-              </mat-list-item></mat-list>
-            </div>
-
-            <div *ngIf="row.policyDetail.Conditions.DevicePlatforms && row.policyDetail.Conditions.DevicePlatforms.Exclude">
-              Excluding device platforms: <mat-list><mat-list-item *ngFor="let platform of row.policyDetail.Conditions.DevicePlatforms.Exclude[0].DevicePlatforms">
-                {{platform}}
-              </mat-list-item></mat-list>
-            </div>
-
-            <div *ngIf="row.policyDetail.Conditions.Devices && row.policyDetail.Conditions.Devices.Include">
-              Including devices: <mat-list><mat-list-item>{{row.policyDetail.Conditions.Devices.Include[0].DeviceRule}}</mat-list-item></mat-list>
-            </div>
-
-            <div *ngIf="row.policyDetail.Conditions.Devices && row.policyDetail.Conditions.Devices.Exclude">
-              Excluding devices: <mat-list><mat-list-item>{{row.policyDetail.Conditions.Devices.Exclude[0].DeviceRule}}</mat-list-item></mat-list>
-            </div>
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="controls">
-          <th mat-header-cell *matHeaderCellDef>Controls</th>
-          <td mat-cell *matCellDef="let row">
-          <div *ngIf="row.policyDetail.Controls && row.policyDetail.Controls.length > 0" >
-            Sign-in controls:
-            <mat-list><mat-list-item *ngFor="let control of row.policyDetail.Controls">{{control.Control? 'Control: ' + control.Control.join(' or ') : '' }}{{control.AuthStrengthIds? 'Auth strength: ' + control.AuthStrengthIds.join(' or ') : '' }}</mat-list-item></mat-list>
+      <!-- Scope -->
+      <ng-container matColumnDef="policyScope">
+        <th mat-header-cell *matHeaderCellDef>Applies to</th>
+        <td mat-cell *matCellDef="let row">
+          <div *ngIf="row.policyScope.include.length > 0" class="policy-chip-section">
+            <span class="policy-section-label">Includes</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let scope of row.policyScope.include" disableRipple>
+                <a *ngIf="scope.objectType != 'SPECIAL'" [routerLink]="['/', scope.objectType.toLowerCase() + 's', scope.objectId]">{{scope.displayName}}</a>
+                <span *ngIf="scope.objectType == 'SPECIAL'">{{scope.displayName}}</span>
+              </mat-chip>
+            </mat-chip-list>
           </div>
-          <div *ngIf="row.policyDetail.SessionControls" >
-           Session controls: <mat-list><mat-list-item *ngFor="let control of row.policyDetail.SessionControls">
-                {{control}}
-              </mat-list-item></mat-list>
+          <div *ngIf="row.policyScope.exclude.length > 0" class="policy-chip-section">
+            <span class="policy-section-label">Excludes</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let scope of row.policyScope.exclude" disableRipple>
+                <a *ngIf="scope.objectType != 'SPECIAL'" [routerLink]="['/', scope.objectType.toLowerCase() + 's', scope.objectId]">{{scope.displayName}}</a>
+                <span *ngIf="scope.objectType == 'SPECIAL'">{{scope.displayName}}</span>
+              </mat-chip>
+            </mat-chip-list>
           </div>
-          </td>
-        </ng-container>
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="policyDetail">
-          <th mat-header-cell *matHeaderCellDef>Policy details</th>
-          <td mat-cell *matCellDef="let row" appJsonFormat [json]="row.policyDetail"></td>
-        </ng-container>
+      <!-- Merged Conditions + Controls -->
+      <ng-container matColumnDef="details">
+        <th mat-header-cell *matHeaderCellDef>Conditions &amp; Controls</th>
+        <td mat-cell *matCellDef="let row">
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumnsPolicies"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumnsPolicies;"></tr>
-      </table>
-    </mat-tab>
+          <div *ngIf="row.policyDetail.Conditions.ClientTypes?.Include" class="policy-chip-section">
+            <span class="policy-section-label">Clients</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let client of row.policyDetail.Conditions.ClientTypes.Include[0].ClientTypes" disableRipple>{{client}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.AuthFlows?.Include" class="policy-chip-section">
+            <span class="policy-section-label">Auth flows</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let authflow of row.policyDetail.Conditions.AuthFlows.Include[0].AuthFlows" disableRipple>{{authflow}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.Locations?.Include" class="policy-chip-section">
+            <span class="policy-section-label">Locations (inc.)</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let location of row.policyDetail.Conditions.Locations.Include[0].Locations" disableRipple>
+                <span *ngIf="location == 'All' || location == 'AllTrusted'">{{location}}</span>
+                <span *ngIf="location != 'All' && policyLocations && policyLocations[location]"
+                      [matTooltip]="policyLocations[location].ipRanges ? policyLocations[location].ipRanges.join(', ') : policyLocations[location].countryCodes.join(', ')">
+                  {{policyLocations[location].displayName}}
+                </span>
+                <span *ngIf="location != 'All' && location != 'AllTrusted' && (!policyLocations || !policyLocations[location])">Unknown: {{location}}</span>
+              </mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.Locations?.Exclude" class="policy-chip-section">
+            <span class="policy-section-label">Locations (exc.)</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let location of row.policyDetail.Conditions.Locations.Exclude[0].Locations" disableRipple>
+                <span *ngIf="location == 'All' || location == 'AllTrusted'">{{location}}</span>
+                <span *ngIf="policyLocations && policyLocations[location]"
+                      [matTooltip]="policyLocations[location].ipRanges ? policyLocations[location].ipRanges.join(', ') : policyLocations[location].countryCodes.join(', ')">
+                  {{policyLocations[location].displayName}}
+                </span>
+                <span *ngIf="location != 'All' && location != 'AllTrusted' &&  (!policyLocations || !policyLocations[location])">Unknown: {{location}}</span>
+              </mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.DevicePlatforms?.Include" class="policy-chip-section">
+            <span class="policy-section-label">Platforms (inc.)</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let platform of row.policyDetail.Conditions.DevicePlatforms.Include[0].DevicePlatforms" disableRipple>{{platform}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.DevicePlatforms?.Exclude" class="policy-chip-section">
+            <span class="policy-section-label">Platforms (exc.)</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let platform of row.policyDetail.Conditions.DevicePlatforms.Exclude[0].DevicePlatforms" disableRipple>{{platform}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.Devices?.Include" class="policy-chip-section">
+            <span class="policy-section-label">Devices (inc.)</span>
+            <mat-chip-list>
+              <mat-chip disableRipple>{{row.policyDetail.Conditions.Devices.Include[0].DeviceRule}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.Devices?.Exclude" class="policy-chip-section">
+            <span class="policy-section-label">Devices (exc.)</span>
+            <mat-chip-list>
+              <mat-chip disableRipple>{{row.policyDetail.Conditions.Devices.Exclude[0].DeviceRule}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Controls?.length > 0" class="policy-chip-section">
+            <span class="policy-section-label">Sign-in controls</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let control of row.policyDetail.Controls" disableRipple>
+                {{control.Control ? control.Control.join(' or ') : ''}}{{control.AuthStrengthIds ? 'Auth strength: ' + control.AuthStrengthIds.join(', ') : ''}}
+              </mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.SessionControls" class="policy-chip-section">
+            <span class="policy-section-label">Session controls</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let control of row.policyDetail.SessionControls" disableRipple>{{control}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumnsPolicies"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumnsPolicies;"></tr>
+    </table>
+  </mat-tab>
+
   <mat-tab label="Raw"><mat-card appJsonFormat [json]="user"></mat-card></mat-tab>
 </mat-tab-group>
 </mat-dialog-content>

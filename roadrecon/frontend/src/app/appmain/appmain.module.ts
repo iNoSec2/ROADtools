@@ -18,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClientModule } from '@angular/common/http';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { UsersItem, DatabaseService, UsersResolveService, DevicesResolveService, GroupsResolveService, ServicePrincipalsResolveService } from './aadobjects.service'
 import { UtilitiesService } from './utils.service'
@@ -88,6 +89,7 @@ import { Oauth2permissionsComponent } from './oauth2permissions/oauth2permission
     MatTooltipModule,
     MatSlideToggleModule,
     MatProgressSpinnerModule,
+    MatChipsModule,
     NgxWebstorageModule.forRoot({'prefix':'RT'}),
   ],
   exports: [

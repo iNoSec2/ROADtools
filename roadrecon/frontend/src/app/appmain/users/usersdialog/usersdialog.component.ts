@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { UtilitiesService } from '../../utils.service';
 import { UsersItem, DatabaseService, PolicyItem, NetworkLocationItem, NetworkLocationList, PIMRoleDefinition, PIMRoleAssignment, AccessPackagePolicy, AccessPackageDetails, AzureRoleAssignment, AzureScopeInfo } from '../../aadobjects.service'
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSort } from '@angular/material/sort';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -61,7 +62,7 @@ export class UsersdialogComponent {
   public displayedColumnsServicePrincipals: string[] = ['displayName', 'publisherName', 'microsoftFirstParty', 'passwordCredentials', 'keyCredentials', 'appRoles', 'oauth2Permissions'];
   public displayedColumnsDevices: string[] = ['displayName', 'deviceManufacturer', 'accountEnabled', 'deviceModel', 'deviceOSType', 'deviceOSVersion', 'deviceTrustType', 'isCompliant', 'isManaged', 'isRooted'];
   public displayedColumnsApplications: string[] = ['displayName', 'passwordCredentials', 'keyCredentials', 'appRoles', 'oauth2Permissions'];
-  public displayedColumnsPolicies: string[] = ['displayName', 'policyScope', 'policyConditions', 'controls'];
+  public displayedColumnsPolicies: string[] = ['displayName', 'policyScope', 'details'];
   public displayedColumnsPim: string[] = ['resourceType', 'resourceAndRole', 'assignmentState', 'approval', 'duration'];
   public displayedColumnsAccessPackage: string[] = ['packageName', 'resources', 'approval', 'duration'];
   public displayedColumnsAzureRole: string[] = ['role', 'scopeType', 'scopeDetails'];
@@ -70,8 +71,8 @@ export class UsersdialogComponent {
   public user: UsersItem;
   public policies: PolicyItem[];
   public policyLocations: NetworkLocationList;
-  public PIMgroupAssignments: PIMRoleAssignment[];
-  public accessPackages: AccessPackagePolicy[];
+  public PIMgroupAssignments: PIMRoleAssignment[] = [];
+  public accessPackages: AccessPackagePolicy[] = [];
   public azureRoleAssignments: AzureRoleAssignment[] = [];
   public resolvedResources: Map<string, string> = new Map(); // Cache for resolved resource names
   public isLoadingResources: boolean = false;
