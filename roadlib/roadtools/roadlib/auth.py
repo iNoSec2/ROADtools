@@ -639,6 +639,63 @@ class Authentication():
         self.tokendata = self.tokenreply_to_tokendata(tokenreply)
         return self.tokendata
 
+    def authenticate_agent_user_native(self, blueprint_assertion, agent_assertion, username, additionaldata=None, returnreply=False):
+        """
+        Authenticate as an agent identity user, given the blueprint assertion and the agent assertion
+        Similar to OBO flow but with some extra parameters
+        """
+        authority_uri = self.get_authority_url()
+        data = {
+            "client_id": self.client_id,
+            "grant_type": "user_fic",
+            "resource": self.resource_uri,
+            "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            "client_assertion": blueprint_assertion,
+            "requested_token_use": "on_behalf_of",
+            "user_federated_identity_credential": agent_assertion,
+            "username": username
+        }
+        if additionaldata:
+            data = {**data, **additionaldata}
+        res = self.requests_post(f"{authority_uri}/oauth2/token", data=data)
+        if res.status_code != 200:
+            raise AuthenticationException(res.text)
+        tokenreply = res.json()
+        if returnreply:
+            return tokenreply
+        self.tokendata = self.tokenreply_to_tokendata(tokenreply)
+        return self.tokendata
+
+    def authenticate_agent_user_native_v2(self, blueprint_assertion, agent_assertion, username, additionaldata=None, returnreply=False):
+        """
+        Authenticate as an agent identity user, given the blueprint assertion and the agent assertion (v2 endpoint)
+        """
+        authority_uri = self.get_authority_url()
+        data = {
+            "client_id": self.client_id,
+            "grant_type": "user_fic",
+            "scope": self.scope,
+            "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            "client_assertion": blueprint_assertion,
+            "requested_token_use": "on_behalf_of",
+            "user_federated_identity_credential": agent_assertion,
+            "username": username
+        }
+        if additionaldata:
+            data = {**data, **additionaldata}
+        if self.use_cae:
+            self.set_cae()
+        if self.claims:
+            data['claims'] = json.dumps(self.claims)
+        res = self.requests_post(f"{authority_uri}/oauth2/v2.0/token", data=data)
+        if res.status_code != 200:
+            raise AuthenticationException(res.text)
+        tokenreply = res.json()
+        if returnreply:
+            return tokenreply
+        self.tokendata = self.tokenreply_to_tokendata(tokenreply)
+        return self.tokendata
+
     def generate_app_assertion(self, use_v2=True, use_x5c=False):
         data = self.appcertificate.public_bytes(
             serialization.Encoding.DER

@@ -325,6 +325,7 @@ def main():
     appauth_parser.add_argument('--pfx-pass', action='store', metavar='password', help='PFX file password')
     appauth_parser.add_argument('--pfx-base64', action='store', metavar='BASE64', help='PFX file as base64 string')
     appauth_parser.add_argument('--assertion', action='store', metavar='JWT', help='Signed JWT assertion for cert based auth')
+    appauth_parser.add_argument('--assertion-file', action='store', metavar='FILE', help='File in .roadtools_auth format containing assertion JWT')
     appauth_parser.add_argument('--cae',
                                 action='store_true',
                                 help='Request Continuous Access Evaluation tokens (requires use of scope parameter instead of resource)')
@@ -337,6 +338,7 @@ def main():
     appauth_parser.add_argument('--tokens-stdout',
                                 action='store_true',
                                 help='Do not store tokens on disk, pipe to stdout instead')
+    appauth_parser.add_argument('--fmi-path', action='store', help='FMI path for Agent auth')
 
     acsauth_parser = subparsers.add_parser('actortoken', aliases=('getactortokens', 'getactortoken'), help='Get actor token with ACS')
     acsauth_parser.add_argument('-c',
@@ -508,6 +510,59 @@ def main():
                                 help='File to store the credentials (default: .roadtools_auth)',
                                 default='.roadtools_auth')
     fedauth_parser.add_argument('--tokens-stdout',
+                                action='store_true',
+                                help='Do not store tokens on disk, pipe to stdout instead')
+
+    # Agent auth
+    agtauth_parser = subparsers.add_parser('agentauth', help='Authenticate as a agent identity / blueprint / agent identity User')
+    agtauth_parser.add_argument('-c',
+                                '--client',
+                                action='store',
+                                help='Client ID of the agent identity blueprint to use when authenticating.',
+                                required=True)
+    agtauth_parser.add_argument('-a',
+                                '--agent',
+                                action='store',
+                                help='Client ID of the agent identity to use when authenticating. If specified, auth as agent instead of blueprint')
+    agtauth_parser.add_argument('-u',
+                                '--user',
+                                action='store',
+                                help='Agent identity user UPN to use when authenticating. If specified, auth as agent identity user instead of agent or blueprint.')
+    agtauth_parser.add_argument('-p',
+                                '--password',
+                                action='store',
+                                help="Client secret or password credential for the blueprint, if not using certificates")
+    agtauth_parser.add_argument('-r',
+                                '--resource',
+                                action='store',
+                                help='Resource to authenticate to. Either a full URL or alias (list with roadtx listaliases)',
+                                default='https://graph.windows.net')
+    agtauth_parser.add_argument('-s',
+                                '--scope',
+                                action='store',
+                                help='Scope to use. Will automatically switch to v2.0 auth endpoint if specified. If unsure use -r instead.')
+    agtauth_parser.add_argument('-t',
+                                '--tenant',
+                                action='store',
+                                help='Tenant ID or domain to auth to',
+                                required=True)
+    agtauth_parser.add_argument('--cert-pem', action='store', metavar='file', help='Certificate file with blueprint certificate')
+    agtauth_parser.add_argument('--key-pem', action='store', metavar='file', help='Private key file for blueprint')
+    agtauth_parser.add_argument('--cert-pfx', action='store', metavar='file', help='Blueprint cert and key as PFX file')
+    agtauth_parser.add_argument('--pfx-pass', action='store', metavar='password', help='PFX file password')
+    agtauth_parser.add_argument('--pfx-base64', action='store', metavar='BASE64', help='PFX file as base64 string')
+    agtauth_parser.add_argument('--assertion', action='store', metavar='JWT', help='Signed JWT assertion for federated auth')
+    agtauth_parser.add_argument('--assertion-file', action='store', metavar='FILE', help='File in .roadtools_auth format containing assertion JWT')
+    agtauth_parser.add_argument('--cae',
+                                action='store_true',
+                                help='Request Continuous Access Evaluation tokens (requires use of scope parameter instead of resource)')
+    agtauth_parser.add_argument('-ua', '--user-agent', action='store',
+                                help='Custom user agent to use. Default: Python requests user agent')
+    agtauth_parser.add_argument('--tokenfile',
+                                action='store',
+                                help='File to store the credentials (default: .roadtools_auth)',
+                                default='.roadtools_auth')
+    agtauth_parser.add_argument('--tokens-stdout',
                                 action='store_true',
                                 help='Do not store tokens on disk, pipe to stdout instead')
 
@@ -1285,26 +1340,130 @@ def main():
                 print(f'Requesting token with scope {auth.scope}')
             else:
                 print(f'Requesting token for resource {auth.resource_uri}')
+        additionaldata = {}
+        # For agent based auth
+        if args.fmi_path:
+            additionaldata['fmi_path'] = args.fmi_path
+
         if args.password:
             # Password based flow
             if args.scope:
-                auth.authenticate_as_app_native_v2(client_secret=args.password)
+                auth.authenticate_as_app_native_v2(client_secret=args.password, additionaldata=additionaldata)
             else:
-                auth.authenticate_as_app_native(client_secret=args.password)
-        elif args.assertion:
+                auth.authenticate_as_app_native(client_secret=args.password, additionaldata=additionaldata)
+        elif args.assertion or args.assertion_file:
+            if args.assertion_file:
+                with codecs.open(args.assertion_file, 'r', 'utf-8') as infile:
+                    tokenobject = json.load(infile)
+                try:
+                    args.assertion = tokenobject['accessToken']
+                except KeyError:
+                    print('No assertion as access token found in specified file')
+                    return
             if args.scope:
-                auth.authenticate_as_app_native_v2(assertion=args.assertion)
+                auth.authenticate_as_app_native_v2(assertion=args.assertion, additionaldata=additionaldata)
             else:
-                auth.authenticate_as_app_native(assertion=args.assertion)
+                auth.authenticate_as_app_native(assertion=args.assertion, additionaldata=additionaldata)
         else:
             if not auth.loadappcert(args.cert_pem, args.key_pem, args.cert_pfx, args.pfx_pass, args.pfx_base64):
                 return
             if args.scope:
                 assertion = auth.generate_app_assertion(use_v2=True)
-                auth.authenticate_as_app_native_v2(assertion=assertion)
+                auth.authenticate_as_app_native_v2(assertion=assertion, additionaldata=additionaldata)
             else:
                 assertion = auth.generate_app_assertion(use_v2=False)
-                auth.authenticate_as_app_native(assertion=assertion)
+                auth.authenticate_as_app_native(assertion=assertion, additionaldata=additionaldata)
+        auth.save_tokens(args)
+    elif args.command == 'agentauth':
+        auth.set_client_id(args.client)
+        auth.set_resource_uri(args.resource)
+        auth.set_scope(args.scope)
+        if args.cae:
+            auth.set_cae()
+        auth.tenant = args.tenant
+        auth.outfile = args.tokenfile
+        if not args.tokens_stdout:
+            if args.scope:
+                print(f'Requesting token with scope {auth.scope}')
+            else:
+                print(f'Requesting token for resource {auth.resource_uri}')
+        additionaldata = {}
+        # If agent unspecified, auth as blueprint, otherwise, first get federated token for agent identity
+        if args.agent:
+            additionaldata['fmi_path'] = args.agent
+            auth.set_scope('api://AzureADTokenExchange/.default')
+            if args.user:
+                print('Authentication mode: agent identity user')
+            else:
+                print('Authentication mode: agent identity')
+        else:
+            print('Authentication mode: agent identity blueprint')
+
+        # Request blueprint token
+        if args.password:
+            # Password based flow
+            if args.scope or args.agent:
+                auth.authenticate_as_app_native_v2(client_secret=args.password, additionaldata=additionaldata)
+            else:
+                auth.authenticate_as_app_native(client_secret=args.password, additionaldata=additionaldata)
+        elif args.assertion or args.assertion_file:
+            if args.assertion_file:
+                with codecs.open(args.assertion_file, 'r', 'utf-8') as infile:
+                    tokenobject = json.load(infile)
+                try:
+                    args.assertion = tokenobject['accessToken']
+                except KeyError:
+                    print('No assertion found in token file')
+                    return
+            if args.scope or args.agent:
+                auth.authenticate_as_app_native_v2(assertion=args.assertion, additionaldata=additionaldata)
+            else:
+                auth.authenticate_as_app_native(assertion=args.assertion, additionaldata=additionaldata)
+        else:
+            if not auth.loadappcert(args.cert_pem, args.key_pem, args.cert_pfx, args.pfx_pass, args.pfx_base64):
+                return
+            if args.scope or args.agent:
+                assertion = auth.generate_app_assertion(use_v2=True)
+                auth.authenticate_as_app_native_v2(assertion=assertion, additionaldata=additionaldata)
+            else:
+                assertion = auth.generate_app_assertion(use_v2=False)
+                auth.authenticate_as_app_native(assertion=assertion, additionaldata=additionaldata)
+        if not args.agent:
+            # save blueprint token and exit
+            auth.save_tokens(args)
+            return
+
+        # save token and clear variables
+        additionaldata = {}
+        blueprint_assertion = auth.tokendata['accessToken']
+        if not args.user:
+            # auth flow - agent identity
+            # request final token with assertion
+            auth.set_client_id(args.agent)
+            auth.scope = None
+            auth.set_resource_uri(args.resource)
+            auth.set_scope(args.scope)
+            if args.scope:
+                auth.authenticate_as_app_native_v2(assertion=blueprint_assertion)
+            else:
+                auth.authenticate_as_app_native(assertion=blueprint_assertion)
+            # save agent identity token and exit
+            auth.save_tokens(args)
+            return
+        # else, request exchange token for the user first
+        auth.set_client_id(args.agent)
+        auth.set_scope('api://AzureADTokenExchange/.default')
+        auth.authenticate_as_app_native_v2(assertion=blueprint_assertion)
+        agent_assertion = auth.tokendata['accessToken']
+
+        # request final token for user, reset scope / resource and then call agent auth function from roadlib
+        auth.scope = None
+        auth.set_resource_uri(args.resource)
+        auth.set_scope(args.scope)
+        if args.scope:
+            auth.authenticate_agent_user_native_v2(blueprint_assertion, agent_assertion, args.user)
+        else:
+            auth.authenticate_agent_user_native(blueprint_assertion, agent_assertion, args.user)
         auth.save_tokens(args)
     elif args.command == 'appauthobo':
         auth.set_client_id(args.client)
