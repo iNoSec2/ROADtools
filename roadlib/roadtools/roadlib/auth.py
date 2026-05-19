@@ -67,6 +67,7 @@ class Authentication():
         self.claims = None
         self.use_pkce = False
         self.pkce_secret = None
+        self.custom_headers = {}
 
         # For cert based app auth
         self.appprivkey = None
@@ -135,6 +136,13 @@ class Authentication():
             return utils.find_redirurl_for_client(client_id, interactive=interactive, broker=broker)
         except Exception:
             return 'https://login.microsoftonline.com/common/oauth2/nativeclient'
+
+    def set_custom_headers(self, headers_dict):
+        """
+        Sets custom headers to include in all HTTP requests
+        """
+        if headers_dict:
+            self.custom_headers = headers_dict
 
     def user_discovery_v1(self, username):
         """
@@ -1712,6 +1720,9 @@ class Authentication():
         auth_parser.add_argument('--tokens-stdout',
                                  action='store_true',
                                  help='Do not store tokens on disk, pipe to stdout instead')
+        auth_parser.add_argument('--headers',
+                                 action='store',
+                                 help='Custom headers in JSON format, e.g., \'{"X-AnchorMailbox": "Oid:objectid@tenantid"}\'')
         auth_parser.add_argument('--debug',
                                  action='store_true',
                                  help='Enable debug logging to disk')
@@ -1936,6 +1947,10 @@ class Authentication():
             headers = kwargs.get('headers',{})
             headers['User-Agent'] = self.user_agent
             kwargs['headers'] = headers
+        if self.custom_headers:
+            headers = kwargs.get('headers',{})
+            headers.update(self.custom_headers)
+            kwargs['headers'] = headers
         return requests.get(*args, timeout=30.0, **kwargs)
 
     def requests_post(self, *args, **kwargs):
@@ -1951,6 +1966,10 @@ class Authentication():
         if self.origin:
             headers = kwargs.get('headers',{})
             headers['Origin'] = self.origin
+            kwargs['headers'] = headers
+        if self.custom_headers:
+            headers = kwargs.get('headers',{})
+            headers.update(self.custom_headers)
             kwargs['headers'] = headers
         return requests.post(*args, timeout=30.0, **kwargs)
 
@@ -1968,6 +1987,10 @@ class Authentication():
             headers = kwargs.get('headers',{})
             headers['Origin'] = self.origin
             kwargs['headers'] = headers
+        if self.custom_headers:
+            headers = kwargs.get('headers',{})
+            headers.update(self.custom_headers)
+            kwargs['headers'] = headers
         return requests.put(*args, timeout=30.0, **kwargs)
 
     def requests_patch(self, *args, **kwargs):
@@ -1984,6 +2007,10 @@ class Authentication():
             headers = kwargs.get('headers',{})
             headers['Origin'] = self.origin
             kwargs['headers'] = headers
+        if self.custom_headers:
+            headers = kwargs.get('headers',{})
+            headers.update(self.custom_headers)
+            kwargs['headers'] = headers
         return requests.patch(*args, timeout=30.0, **kwargs)
     
     def requests_delete(self, *args, **kwargs):
@@ -1995,6 +2022,10 @@ class Authentication():
         if self.user_agent:
             headers = kwargs.get('headers',{})
             headers['User-Agent'] = self.user_agent
+            kwargs['headers'] = headers
+        if self.custom_headers:
+            headers = kwargs.get('headers',{})
+            headers.update(self.custom_headers)
             kwargs['headers'] = headers
         return requests.delete(*args, timeout=30.0, **kwargs)
 
@@ -2012,6 +2043,12 @@ class Authentication():
         self.set_resource_uri(args.resource)
         self.set_scope(args.scope)
         self.set_user_agent(args.user_agent)
+        if hasattr(args, 'headers') and args.headers:
+            try:
+                headers_dict = json.loads(args.headers)
+                self.set_custom_headers(headers_dict)
+            except json.JSONDecodeError:
+                print(f'Error: Invalid JSON format for headers: {args.headers}')
         if args.cae:
             self.set_cae()
         if args.force_mfa:
