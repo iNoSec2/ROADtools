@@ -79,4 +79,4 @@ pip install roadtx/
 You can also install them in development mode with `pip install -e roadtx/`.
 
 ### Using roadtx
-See [the Wiki](https://github.com/dirkjanm/ROADtools/wiki/ROADtools-Token-eXchange-(roadtx)) on how to use roadtx.
+See [the Wiki](https://github.com/dirkjanm/ROADtools/wiki/ROADtools-Token-eXchange-(roadtx)) on how to use roadtx. See also the [release blog](https://dirkjanm.io/introducing-roadtools-token-exchange-roadtx/).
