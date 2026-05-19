@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography import x509
 from roadtools.roadlib.constants import WELLKNOWN_RESOURCES, WELLKNOWN_CLIENTS, WELLKNOWN_USER_AGENTS, \
     DSSO_BODY_KERBEROS, DSSO_BODY_USERPASS, SAML_TOKEN_TYPE_V1, SAML_TOKEN_TYPE_V2, GRANT_TYPE_SAML1_1, \
-    WSS_SAML_TOKEN_PROFILE_V1_1, WSS_SAML_TOKEN_PROFILE_V2, GRANT_TYPE_SAML2
+    WSS_SAML_TOKEN_PROFILE_V1_1, WSS_SAML_TOKEN_PROFILE_V2, GRANT_TYPE_SAML2, AUTHORITIES
 from roadtools.roadlib.wstrust import Mex, build_rst, parse_wstrust_response
 import requests
 import jwt
@@ -52,6 +52,7 @@ class Authentication():
         self.origin = None
         self.set_client_id(client_id)
         self.resource_uri = 'https://graph.windows.net/'
+        self.authority = 'login.microsoftonline.com'
         self.tokendata = {}
         self.refresh_token = None
         self.saml_token = None
@@ -72,14 +73,22 @@ class Authentication():
         self.appcertificate = None
         self.appkeydata = None
 
-    def get_authority_url(self, default_tenant='common'):
+    def get_authority_url(self, default_tenant='common', force_tenant=None):
         """
         Returns the authority URL for the tenant specified, or the
         common one if no tenant was specified
         """
+        if force_tenant:
+            return f'https://{self.authority}/{force_tenant}'
         if self.tenant is not None:
-            return f'https://login.microsoftonline.com/{self.tenant}'
-        return f'https://login.microsoftonline.com/{default_tenant}'
+            return f'https://{self.authority}/{self.tenant}'
+        return f'https://{self.authority}/{default_tenant}'
+
+    def set_authority(self, authority):
+        """
+        Sets client ID to use (accepts aliases)
+        """
+        self.authority = self.lookup_authority(authority)
 
     def set_client_id(self, clid):
         """
@@ -132,7 +141,7 @@ class Authentication():
         Discover whether this is a federated user
         """
         # Tenant specific endpoint seems to not work for this?
-        authority_uri = 'https://login.microsoftonline.com/common'
+        authority_uri = self.get_authority_url(force_tenant='common')
         user = quote_plus(username)
         res = self.requests_get(f"{authority_uri}/UserRealm/{user}?api-version=1.0")
         response = res.json()
@@ -143,7 +152,7 @@ class Authentication():
         Discover whether this is a federated user
         """
         # Tenant specific endpoint seems to not work for this?
-        authority_uri = 'https://login.microsoftonline.com/common'
+        authority_uri = self.get_authority_url(force_tenant='common')
         user = quote_plus(username)
         res = self.requests_get(f"{authority_uri}/UserRealm/{user}?api-version=2.0")
         response = res.json()
@@ -1090,8 +1099,8 @@ class Authentication():
         Build authorize URL. Can be v2 by specifying scope, otherwise defaults
         to v1 with resource
         '''
-        urlt_v2 = 'https://login.microsoftonline.com/{3}/oauth2/v2.0/authorize?response_type={4}&client_id={0}&scope={2}&redirect_uri={1}&state={5}'
-        urlt_v1 = 'https://login.microsoftonline.com/{3}/oauth2/authorize?response_type={4}&client_id={0}&resource={2}&redirect_uri={1}&state={5}'
+        urlt_v2 = 'https://{6}/{3}/oauth2/v2.0/authorize?response_type={4}&client_id={0}&scope={2}&redirect_uri={1}&state={5}'
+        urlt_v1 = 'https://{6}/{3}/oauth2/authorize?response_type={4}&client_id={0}&resource={2}&redirect_uri={1}&state={5}'
         if self.use_pkce:
             if not self.pkce_secret:
                 self.gen_pkce_secret()
@@ -1120,7 +1129,8 @@ class Authentication():
                 quote_plus(scope),
                 quote_plus(tenant),
                 quote_plus(response_type),
-                quote_plus(state)
+                quote_plus(state),
+                quote_plus(self.authority)
             )
         if self.has_force_mfa():
             urlt_v1 += '&amr_values=ngcmfa'
@@ -1131,7 +1141,8 @@ class Authentication():
             quote_plus(self.resource_uri),
             quote_plus(tenant),
             quote_plus(response_type),
-            quote_plus(state)
+            quote_plus(state),
+            quote_plus(self.authority)
         )
 
     def create_prt_cookie_kdf_ver_2(self, prt, sessionkey, nonce=None):
@@ -1283,7 +1294,8 @@ class Authentication():
         Returns Nonce as a dict {'Nonce':data}
         """
         data = {'grant_type':'srv_challenge'}
-        res = self.requests_post('https://login.microsoftonline.com/common/oauth2/token', data=data)
+        authority_uri = self.get_authority_url(force_tenant='common')
+        res = self.requests_post(f'{authority_uri}/oauth2/token', data=data)
         return res.json()
 
     def get_srv_challenge_nonce(self):
@@ -1845,6 +1857,17 @@ class Authentication():
             return resolved
         except KeyError:
             return useragent
+
+    @staticmethod
+    def lookup_authority(authority):
+        """
+        Translate authority aliases
+        """
+        try:
+            resolved = AUTHORITIES[authority.lower()]
+            return resolved
+        except KeyError:
+            return authority
 
     def requests_get(self, *args, **kwargs):
         '''

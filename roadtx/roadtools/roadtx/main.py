@@ -28,6 +28,7 @@ def main():
     parser.add_argument('-pt', '--proxy-type', action='store', default="http", help="Proxy type to use. Supported: http / socks4 / socks5. Default: http")
     parser.add_argument('-s', '--secure', action='store_true', help="Enforce certificate validation even if using a proxy")
     parser.add_argument('-i', '--insecure', action='store_true', help="Do not validate certificates (insecure)")
+    parser.add_argument('-a', '--authority', action='store', help="Authority to use for national tenants (format: auth URI without https:// prefix or alias: global / us / china. default: login.microsoftonline.com)")
 
     # Add subparsers for modules
     subparsers = parser.add_subparsers(dest='command')
@@ -1143,6 +1144,9 @@ def main():
     # Disable TLS cert validation
     if args.insecure:
         auth.verify = deviceauth.verify = False
+
+    if args.authority:
+        auth.set_authority(args.authority)
 
     if args.command in ('auth', 'gettokens', 'gettoken'):
         auth.parse_args(args)

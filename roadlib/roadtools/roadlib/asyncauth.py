@@ -49,7 +49,7 @@ class AsyncAuthentication(Authentication):
         Discover whether this is a federated user
         """
         # Tenant specific endpoint seems to not work for this?
-        authority_uri = 'https://login.microsoftonline.com/common'
+        authority_uri = self.get_authority_url(force_tenant='common')
         user = quote_plus(username)
         res = await self.requests_get(f"{authority_uri}/UserRealm/{user}?api-version=1.0")
         response = await res.json()
@@ -60,7 +60,7 @@ class AsyncAuthentication(Authentication):
         Discover whether this is a federated user
         """
         # Tenant specific endpoint seems to not work for this?
-        authority_uri = 'https://login.microsoftonline.com/common'
+        authority_uri = self.get_authority_url(force_tenant='common')
         user = quote_plus(username)
         res = await self.requests_get(f"{authority_uri}/UserRealm/{user}?api-version=2.0")
         response = await res.json()
@@ -771,16 +771,17 @@ class AsyncAuthentication(Authentication):
         Returns Nonce as a dict {'Nonce':'data'}
         """
         data = {'grant_type':'srv_challenge'}
+        authority_uri = self.get_authority_url(force_tenant='common')
         if self.cache_nonce:
             # Return cached nonce when we use that and it's fresh enough
             if self.nonce_request_time + 180 > time.time():
                 return self.nonce
             # Not fresh, request new one
             self.nonce_request_time = time.time()
-            res = await self.requests_post('https://login.microsoftonline.com/common/oauth2/token', data=data)
+            res = await self.requests_post(f'{authority_uri}/oauth2/token', data=data)
             self.nonce = await res.json(content_type=None)
             return self.nonce
-        res = await self.requests_post('https://login.microsoftonline.com/common/oauth2/token', data=data)
+        res = await self.requests_post(f'{authority_uri}/oauth2/token', data=data)
         return await res.json(content_type=None)
 
     async def get_srv_challenge_nonce(self):

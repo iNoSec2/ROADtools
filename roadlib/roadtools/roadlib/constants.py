@@ -17,6 +17,7 @@ WELLKNOWN_RESOURCES = {
     "elm": "https://elm.iga.azure.com",
     "pim": "https://api.azrbac.mspim.azure.com",
     "mspim": "https://api.azrbac.mspim.azure.com",
+    "aadtx": "api://AzureADTokenExchange"
 }
 
 WELLKNOWN_CLIENTS = {
@@ -51,6 +52,12 @@ WELLKNOWN_USER_AGENTS = {
     "safari_macos": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.1",
     "safari_ios": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.",
     "empty": "No user agent header"
+}
+
+AUTHORITIES = {
+    "global": "login.microsoftonline.com",
+    "us": "login.microsoftonline.us",
+    "china": "login.partner.microsoftonline.cn"
 }
 
 DSSO_BODY_KERBEROS = '''<?xml version='1.0' encoding='UTF-8'?>
