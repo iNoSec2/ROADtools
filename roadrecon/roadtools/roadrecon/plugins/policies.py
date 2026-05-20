@@ -181,7 +181,8 @@ class AccessPoliciesPlugin():
             'Roles': self._get_role,
             'ServicePrincipals': self._get_serviceprincipal,
             'ServicePrincipalFilterRule': self._get_serviceprincipalrule,
-            'GuestsOrExternalUsers': self._translate_guestsexternal
+            'GuestsOrExternalUsers': self._translate_guestsexternal,
+            'AgenticServicePrincipals': self._get_serviceprincipal,
         }
         ot = ''
         for ctype, clist in crit.items():
@@ -206,6 +207,9 @@ class AccessPoliciesPlugin():
                     ot += ', '.join([escape(uobj.displayName) for uobj in objects])
                 elif ctype == 'ServicePrincipals':
                     ot += 'Service Principals: '
+                    ot += ', '.join([escape(uobj.displayName) for uobj in objects])
+                elif ctype == 'AgenticServicePrincipals':
+                    ot += 'Agentic Service Principals: '
                     ot += ', '.join([escape(uobj.displayName) for uobj in objects])
                 elif ctype == 'Groups':
                     ot += 'Users in groups: '
@@ -346,6 +350,23 @@ class AccessPoliciesPlugin():
             ot += '\n<br /><strong>Excluding</strong>: '
             for icrit in srcond['Exclude']:
                 ot += ', '.join([escape(crit) for crit in icrit['SignInRisks']])
+
+        return ot
+
+    def _parse_agentrisks(self, cond):
+        try:
+            srcond = cond['AgentIdRisks']
+        except KeyError:
+            return ''
+
+        ot = '<strong>Including</strong>: '
+        for icrit in srcond['Include']:
+            ot += ', '.join([escape(crit) for crit in icrit['AgentIdRisks']])
+
+        if 'Exclude' in srcond:
+            ot += '\n<br /><strong>Excluding</strong>: '
+            for icrit in srcond['Exclude']:
+                ot += ', '.join([escape(crit) for crit in icrit['AgentIdRisks']])
 
         return ot
 
@@ -577,6 +598,7 @@ class AccessPoliciesPlugin():
             out['locations'] = self.parse_wrapper(self._parse_locations, conditions, policy)
             out['clients'] = self.parse_wrapper(self._parse_clients, conditions, policy)
             out['signinrisks'] = self.parse_wrapper(self._parse_signinrisks, conditions, policy)
+            out['agentrisks'] = self.parse_wrapper(self._parse_agentrisks, conditions, policy)
             out['sessioncontrols'] = self._parse_sessioncontrols(detail)
             out['devices'] = self.parse_wrapper(self._parse_devices, conditions, policy)
 
@@ -661,6 +683,8 @@ class AccessPoliciesPlugin():
                 table += '<tr><td>At locations</td><td>{0}</td></tr>'.format(out['locations'])
             if out['signinrisks'] != '':
                 table += '<tr><td>Sign-in risks</td><td>{0}</td></tr>'.format(out['signinrisks'])
+            if out['agentrisks'] != '':
+                table += '<tr><td>Agent risks</td><td>{0}</td></tr>'.format(out['agentrisks'])
             if out['authflows'] != '':
                 table += '<tr><td>Authentication flows</td><td>{0}</td></tr>'.format(out['authflows'])
             if out['controls'] != '':
