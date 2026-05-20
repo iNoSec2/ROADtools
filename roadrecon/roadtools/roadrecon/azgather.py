@@ -504,16 +504,10 @@ def main(args=None):
     if tokendata['aud'] not in ('https://management.core.windows.net', 'https://management.core.windows.net/', 'https://management.azure.com/', '00000002-0000-0000-c000-000000000000'):
         if args.autotoken:
             auth = Authentication()
-            auth.set_resource_uri(GATHER_RESOURCE)
-            auth.set_user_agent(args.user_agent)
-            # Tenant from arguments or from tokenfile
-            if args.tenant:
-                auth.tenant = args.tenant
-            elif 'tenantId' in token:
-                auth.tenant = token['tenantId']
-            if '_clientId' in token:
-                auth.set_client_id(token['_clientId'])
-            token = auth.authenticate_with_refresh_native(token['refreshToken'])
+            # Break out of nested client for this resource
+            if '_clientId' in token and token['_clientId'] == 'c44b4083-3bb0-49c1-b47d-974e53cbdf3c' and '_nestedClientId' in token:
+                del token['_nestedClientId']
+            token = auth.handle_autotoken(token, args=args, resource=GATHER_RESOURCE)
         else:
             print(f"Wrong token audience, got {tokendata['aud']} but expected https://management.core.windows.net")
             print("Make sure to request a token with -r https://management.core.windows.net")

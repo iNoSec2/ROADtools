@@ -863,16 +863,7 @@ def main(args=None):
     if tokendata['aud'] not in ('https://graph.windows.net', 'https://graph.windows.net/', '00000002-0000-0000-c000-000000000000'):
         if args.autotoken:
             auth = Authentication()
-            auth.set_resource_uri(GATHER_RESOURCE)
-            auth.set_user_agent(args.user_agent)
-            # Tenant from arguments or from tokenfile
-            if args.tenant:
-                auth.tenant = args.tenant
-            elif 'tenantId' in token:
-                auth.tenant = token['tenantId']
-            if '_clientId' in token:
-                auth.set_client_id(token['_clientId'])
-            token = auth.authenticate_with_refresh_native(token['refreshToken'])
+            token = auth.handle_autotoken(token, args=args, resource=GATHER_RESOURCE)
         else:
             print(f"Wrong token audience, got {tokendata['aud']} but expected https://graph.windows.net")
             print("Make sure to request a token with -r https://graph.windows.net")
