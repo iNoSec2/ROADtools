@@ -356,15 +356,19 @@ class SeleniumAuthentication():
                     driver.close()
                     raise AuthenticationException('Could not complete device code auth within the time limit (button not found: idSIButton9)')
         else:
+            if self.headless:
+                timeout = 60
+            else:
+                timeout = 1200
             try:
-                els = WebDriverWait(driver, 1200).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "idSIButton9"))
+                els = WebDriverWait(driver, timeout).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "idSIButton9"))
                 if not '?code=' in driver.current_url:
                     # Handle KMSI
                     try:
                         driver.find_element(By.ID, "idSIButton9").click()
                     except (ElementClickInterceptedException, ElementNotInteractableException):
                         pass
-                    WebDriverWait(driver, 1200).until(lambda d: '?code=' in d.current_url)
+                    WebDriverWait(driver, timeout).until(lambda d: '?code=' in d.current_url)
                 res = urlparse(driver.current_url)
                 params = parse_qs(res.query)
                 code = params['code'][0]
@@ -418,15 +422,19 @@ class SeleniumAuthentication():
         self.driver.response_interceptor = self.redir_interceptor
         driver = self.driver
         driver.get(url)
+        if self.headless:
+            timeout = 60
+        else:
+            timeout = 1200
         try:
-            els = WebDriverWait(driver, 1200).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "idSIButton9"))
+            els = WebDriverWait(driver, timeout).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "idSIButton9"))
             if not '?code=' in driver.current_url:
                 # Handle KMSI
                 try:
                     driver.find_element(By.ID, "idSIButton9").click()
                 except (ElementClickInterceptedException, ElementNotInteractableException):
                     pass
-                WebDriverWait(driver, 1200).until(lambda d: '?code=' in d.current_url)
+                WebDriverWait(driver, timeout).until(lambda d: '?code=' in d.current_url)
             res = urlparse(driver.current_url)
             params = parse_qs(res.query)
             code = params['code'][0]
