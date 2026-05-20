@@ -2059,6 +2059,42 @@ class Authentication():
         if not self.username is None and self.password is None:
             self.password = getpass.getpass()
 
+    def handle_autotoken(self, tokendata, args=None, resource=None, scope=None):
+        """
+        Handle autotoken for the requested resource based on the input tokenfile
+        """
+        if resource:
+            self.set_resource_uri(resource)
+        if scope:
+            self.set_scope(scope)
+        if args and hasattr(args, 'user_agent') and args.user_agent:
+            self.set_user_agent(args.user_agent)
+        # Tenant from arguments or from tokenfile
+        if args and hasattr(args, 'tenant') and args.tenant:
+            self.tenant = args.tenant
+        elif 'tenantId' in tokendata:
+            self.tenant = tokendata['tenantId']
+        if '_clientId' in tokendata:
+            self.set_client_id(tokendata['_clientId'])
+        if 'originheader' in tokendata:
+            self.set_origin_value(tokendata['originheader'])
+        additionaldata = {}
+        if '_nestedClientId' in tokendata and '_nestedRedirectUrl' in tokendata:
+            # handle broci automatically
+            self.set_client_id(tokendata['_nestedClientId'])
+            additionaldata = {
+                'brk_client_id': tokendata['_clientId'],
+                'redirect_uri': tokendata['_nestedRedirectUrl']
+            }
+            if not 'originheader' in tokendata:
+                parsed = urlparse(tokendata['_nestedRedirectUrl'])
+                self.set_origin_value(f'https://{parsed.hostname}')
+        if not scope:
+            token = self.authenticate_with_refresh_native(tokendata['refreshToken'], additionaldata=additionaldata)
+        else:
+            token = self.authenticate_with_refresh_native_v2(tokendata['refreshToken'], additionaldata=additionaldata)
+        return token
+
     def get_tokens(self, args):
         """
         Get tokens based on the arguments specified.
