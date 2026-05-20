@@ -100,11 +100,12 @@ def checktoken():
         auth.resource_uri = GATHER_RESOURCE
         if 'useragent' in token:
             auth.set_user_agent(token['useragent'])
-        if 'originheader' in token:
-            auth.set_origin_value(token['originheader'])
         if 'refreshToken' in token:
             print("Access token expired - fetching new token using refresh token")
-            token = auth.authenticate_with_refresh_native(token)
+            # Break out of nested client for this resource
+            if '_clientId' in token and token['_clientId'] == 'c44b4083-3bb0-49c1-b47d-974e53cbdf3c' and '_nestedClientId' in token:
+                del token['_nestedClientId']
+            token = auth.handle_autotoken(token, resource=GATHER_RESOURCE)
             headers['Authorization'] = '%s %s' % (token['tokenType'], token['accessToken'])
             expiretime = time.time() + token['expiresIn']
             return True

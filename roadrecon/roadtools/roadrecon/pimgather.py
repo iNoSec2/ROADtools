@@ -131,11 +131,9 @@ def checktoken():
         auth.resource_uri = GATHER_RESOURCE
         if 'useragent' in token:
             auth.set_user_agent(token['useragent'])
-        if 'originheader' in token:
-            auth.set_origin_value(token['originheader'])
         if 'refreshToken' in token:
             print("Access token expired - fetching new token using refresh token")
-            token = auth.authenticate_with_refresh_native(token)
+            token = auth.handle_autotoken(token, resource=GATHER_RESOURCE)
             headers['Authorization'] = '%s %s' % (token['tokenType'], token['accessToken'])
             expiretime = time.time() + token['expiresIn']
             return True
