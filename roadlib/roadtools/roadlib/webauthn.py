@@ -549,6 +549,31 @@ class WebAuthnClient:
 
         return client, passkey_data
 
+    @staticmethod
+    def from_passkey_dict(deviceauth, passkey_data):
+        """
+        Create a WebAuthnClient instance from a software passkey file
+
+        Args:
+            passkey_file: Path to the .rtpk file
+
+        Returns:
+            tuple: (WebAuthnClient instance, passkey_metadata dict)
+        """
+        # Load private key from PEM
+        private_key_pem = passkey_data['private_key'].encode('utf-8')
+        private_key = serialization.load_pem_private_key(
+            private_key_pem,
+            password=None
+        )
+
+        passkey_data['private_key_object'] = private_key
+
+        # Create WebAuthnClient
+        client = WebAuthnClient(deviceauth, passkey_data['private_key_object'], passkey_data['private_key'].encode('utf-8'))
+
+        return client, passkey_data
+
 class EntraIDFIDOAuthenticator:
     """
     Helper class for Entra ID / Azure AD specific FIDO authentication flow

@@ -3,6 +3,7 @@ import sys
 import requests
 import codecs
 import json
+import html
 from urllib.parse import urlparse, parse_qs, quote_plus
 from roadtools.roadlib.auth import Authentication, AuthenticationException, get_data, WELLKNOWN_CLIENTS, WELLKNOWN_RESOURCES
 from roadtools.roadlib.deviceauth import DeviceAuthentication
@@ -213,7 +214,6 @@ class SeleniumAuthentication():
                 'ps': "23",
                 'assertion': json.dumps(assertion)
             }
-            import html
             # Send it as an autopost form so we don't need to deal with all the cookies
             newresp = '<html><head><script>window.onload = function() {  document.getElementById("submitme").submit(); };</script></head>'
             newresp += f'<body>Give it a second...<form action="{req_url}" id="submitme" method="POST">'
@@ -229,7 +229,19 @@ class SeleniumAuthentication():
 
     def get_keepass_cred(self, identity, filepath, password):
         '''
-        Get identity from KeePass file
+        Get password plus OTP from KeePass file
+        '''
+        entry = self.get_keepass_entry(identity, filepath, password)
+        userpassword = entry['Password']
+        try:
+            otpseed = entry['otp']
+        except KeyError:
+            otpseed = None
+        return userpassword, otpseed
+
+    def get_keepass_entry(self, identity, filepath, password):
+        '''
+        Get object from KeePass file
         '''
         if not password and 'KPPASS' in os.environ:
             password = os.environ['KPPASS']
@@ -243,12 +255,7 @@ class SeleniumAuthentication():
         entry = reader.get_entry(identity)
         if not entry:
             raise AuthenticationException(f'Specified username {identity} not found in KeePass file')
-        userpassword = entry['Password']
-        try:
-            otpseed = entry['otp']
-        except KeyError:
-            otpseed = None
-        return userpassword, otpseed
+        return entry
 
     @selenium_wrap
     def selenium_login(self, url, identity=None, password=None, otpseed=None, keep=False, capture=False, federated=False, devicecode=None):

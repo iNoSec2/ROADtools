@@ -918,11 +918,14 @@ def main():
                                 action='store',
                                 help='Origin header to use in code redemption (for single page app flows)')
     kdbauth_parser.add_argument('--autobroker',
-                                 action='store_true',
-                                 help='Authenticate to parent app first based on built-in list of broker app URLs (for Nested App Auth / BroCI)')
+                                action='store_true',
+                                help='Authenticate to parent app first based on built-in list of broker app URLs (for Nested App Auth / BroCI)')
     kdbauth_parser.add_argument('--headless',
                                 action='store_true',
                                 help='Run Selenium in headless mode')
+    kdbauth_parser.add_argument('--passkey',
+                                action='store_true',
+                                help='Authenticate with a software passkey stored in the passkey property of the KeePass entry')
 
     # Interactive auth using Selenium - inject PRT
     browserprtauth_parser = subparsers.add_parser('browserprtauth', help='Selenium based auth with automatic PRT usage. Emulates Edge browser with PRT')
@@ -2073,7 +2076,20 @@ def main():
         else:
             redirect_url = find_redirurl_for_client(auth.client_id, interactive=False)
         selauth = SeleniumAuthentication(auth, deviceauth, redirect_url, proxy=args.proxy, proxy_type=args.proxy_type, headless=args.headless)
-        password, otpseed = selauth.get_keepass_cred(args.username, args.keepass, args.keepass_password)
+        if args.passkey:
+            entry = selauth.get_keepass_entry(args.username, args.keepass, args.keepass_password)
+            if not 'passkey' in entry:
+                print('No passkey was found in the KeePass file on the specified identity')
+                return
+            try:
+                passkeydata = json.loads(entry['passkey'])
+            except json.decoder.JSONDecodeError as ex:
+                print(f'Passkey data is not valid JSON: {str(ex)}')
+                return
+            client, passkey_data = WebAuthnClient.from_passkey_dict(deviceauth, passkeydata)
+            fidoauth = EntraIDFIDOAuthenticator(webauthn_client=client, user_handle=passkey_data['user_handle'])
+        else:
+            password, otpseed = selauth.get_keepass_cred(args.username, args.keepass, args.keepass_password)
         if args.url:
             url = args.url
         else:
@@ -2082,10 +2098,14 @@ def main():
         if not service:
             return
         selauth.driver = selauth.get_webdriver(service, intercept=True)
-        if custom_ua:
-            result = selauth.selenium_login_with_custom_useragent(url, args.username, password, otpseed, keep=args.keep_open, capture=args.capture_code, federated=args.federated, devicecode=args.device_code)
+        if args.passkey:
+            result = selauth.selenium_login_fido(url, args.username, fidoauth, capture=args.capture_code, keep=args.keep_open)
         else:
-            result = selauth.selenium_login_regular(url, args.username, password, otpseed, keep=args.keep_open, capture=args.capture_code, federated=args.federated, devicecode=args.device_code)
+            if custom_ua:
+                result = selauth.selenium_login_with_custom_useragent(url, args.username, password, otpseed, keep=args.keep_open, capture=args.capture_code, federated=args.federated, devicecode=args.device_code)
+            else:
+                result = selauth.selenium_login_regular(url, args.username, password, otpseed, keep=args.keep_open, capture=args.capture_code, federated=args.federated, devicecode=args.device_code)
+
         if args.capture_code:
             if result:
                 print(f'Captured auth code: {result}')
