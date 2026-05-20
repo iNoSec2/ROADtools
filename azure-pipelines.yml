@@ -74,6 +74,23 @@ jobs:
       roadtx gettokens -u $rtuser -p $rtpass
       roadtx gettokens -u $rtuser -p $rtpass -c 27922004-5251-4030-b22d-91ecd9a37ea4 -r msgraph
       roadtx gettokens --refresh-token file -c msteams
+      retry_if_fail() {
+        set +e
+        local exit_code=0
+        for i in 1 2; do
+            "$@"
+            exit_code=$?
+            if [ $exit_code -eq 0 ]; then
+                break
+            fi
+            if [ $i -lt 2 ]; then
+                sleep 10s
+            fi
+        done
+        set -e
+        return $exit_code
+      }
+      retry_if_fail roadtx interactiveauth --headless -u $rtuser -p $rtpass
       rm .roadtools_auth
     displayName: 'Run basic roadtx tests'
     env:
