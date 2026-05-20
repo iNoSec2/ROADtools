@@ -14,7 +14,7 @@ from roadtools.roadlib.constants import WELLKNOWN_CLIENTS, WELLKNOWN_RESOURCES, 
 from roadtools.roadlib.deviceauth import DeviceAuthentication
 from roadtools.roadlib.webauthn import EntraIDFIDOAuthenticator, WebAuthnClient
 from roadtools.roadtx.selenium import SeleniumAuthentication
-from roadtools.roadtx.utils import find_redirurl_for_client, parse_encrypted_token, sanitize_name
+from roadtools.roadtx.utils import find_redirurl_for_client, parse_encrypted_token, sanitize_name, autobroker
 from roadtools.roadtx.federation import EncryptedPFX, SAMLSigner, encode_object_guid
 import pyotp
 import requests
@@ -77,7 +77,7 @@ def main():
                                  help='Origin header to use in refresh token redemption (for single page app flows)')
     rttsauth_parser.add_argument('--autobroker',
                                  action='store_true',
-                                 help='Find broker parameters in built-in first party apps automatically (for Nested App Auth)')
+                                 help='Find broker parameters in built-in first party apps automatically (for Nested App Auth / BroCI)')
     rttsauth_parser.add_argument('-bc',
                                  '--broker-client',
                                  action='store',
@@ -851,6 +851,9 @@ def main():
     intauth_parser.add_argument('--headless',
                                 action='store_true',
                                 help='Run Selenium in headless mode')
+    intauth_parser.add_argument('--autobroker',
+                                 action='store_true',
+                                 help='Authenticate to parent app first based on built-in list of broker app URLs (for Nested App Auth / BroCI)')
 
     # Interactive auth using Selenium - creds from keepass
     kdbauth_parser = subparsers.add_parser('keepassauth', help='Selenium based authentication with credentials from a KeePass database')
@@ -914,6 +917,12 @@ def main():
     kdbauth_parser.add_argument('--origin',
                                 action='store',
                                 help='Origin header to use in code redemption (for single page app flows)')
+    kdbauth_parser.add_argument('--autobroker',
+                                 action='store_true',
+                                 help='Authenticate to parent app first based on built-in list of broker app URLs (for Nested App Auth / BroCI)')
+    kdbauth_parser.add_argument('--headless',
+                                action='store_true',
+                                help='Run Selenium in headless mode')
 
     # Interactive auth using Selenium - inject PRT
     browserprtauth_parser = subparsers.add_parser('browserprtauth', help='Selenium based auth with automatic PRT usage. Emulates Edge browser with PRT')
@@ -1274,49 +1283,8 @@ def main():
         if args.cae:
             auth.use_cae = args.cae
         if args.autobroker:
-            # Automatic broker app selection
-
-            # Load scope data - contains redirect URLs for the broker
-            current_dir = os.path.abspath(os.path.dirname(__file__))
-            datafile = os.path.join(current_dir, 'firstpartyscopes.json')
-            with codecs.open(datafile,'r','utf-8') as infile:
-                data = json.load(infile)
-            if not args.client:
-                print('Client ID is required for autobroker flag, please specify with -c')
+            if not autobroker(args, auth, tokenobject):
                 return
-            if args.broker_client:
-                originclient = auth.lookup_client_id(args.broker_client)
-            elif '_clientId' in tokenobject:
-                originclient = auth.lookup_client_id(tokenobject['_clientId'])
-            else:
-                print('Could not determine client, guessing the client based on redirect URL found')
-                originclient = 'guess'
-            try:
-                targetclient = data['apps'][auth.lookup_client_id(args.client)]
-            except KeyError:
-                print(f'Unknown client with ID {args.client} is not found in roadtx built-in client list. Please specify broker parameters manually.')
-                return
-            validru = False
-            for redirect_url in targetclient['redirect_uris']:
-                if originclient == 'guess' and redirect_url.startswith('brk-'):
-                    validru = True
-                    finalru = redirect_url
-                    break
-                if redirect_url.startswith(f'brk-{originclient}'):
-                    validru = True
-                    finalru = redirect_url
-                    break
-            if not validru:
-                print(f'Could not find a valid broker redirect URL on this client matching the original client ID {originclient}')
-                return
-            parsed = urlparse(finalru)
-            if originclient == 'guess':
-                # We know the client ID now
-                originclient = parsed.scheme.lower()[4:]
-            # Copy correct origin
-            auth.set_origin_value(f'https://{parsed.hostname}')
-            args.broker_redirect_url = finalru
-            args.broker_client = originclient
         if not args.tokens_stdout:
             if args.scope:
                 print(f'Requesting token with scope {auth.scope}')
@@ -1337,6 +1305,8 @@ def main():
             # Save original client ID if doing broker auth
             if args.broker_client:
                 auth.tokendata['_clientId'] = args.broker_client
+                auth.tokendata['_nestedClientId'] = args.client
+                auth.tokendata['_nestedRedirectUrl'] = args.broker_redirect_url
             auth.save_tokens(args)
         except AuthenticationException as ex:
             try:
@@ -1852,6 +1822,19 @@ def main():
             auth.set_force_ngcmfa()
         if args.scope:
             auth.set_scope(args.scope)
+        if args.autobroker:
+            if args.url:
+                print('Cannot use autobroker in combination with the --url parameter, specify only one of the two')
+                return
+            brokerresult = autobroker(args, auth)
+            if not brokerresult:
+                return
+            broker_client, finalru = brokerresult
+            # request token for broker client first
+            auth.set_client_id(broker_client)
+            auth.use_pkce = True
+            if not args.tokens_stdout:
+                print(f'Fetching token for broker client {broker_client}')
         # Intercept if custom UA is set
         custom_ua = args.user_agent is not None
         if args.redirect_url:
@@ -1884,6 +1867,22 @@ def main():
                 print(f'Captured auth code: {result}')
             return
         elif result:
+            if args.autobroker:
+                # Exchange broker refresh token for final app refresh token
+                additionaldata = {
+                    'brk_client_id': broker_client,
+                    'redirect_uri': finalru
+                }
+                auth.set_client_id(args.client)
+                if not args.tokens_stdout:
+                    print(f'Fetching token for final client based on broker refresh token')
+                if args.scope:
+                    auth.authenticate_with_refresh_native_v2(result['refreshToken'], additionaldata=additionaldata)
+                else:
+                    auth.authenticate_with_refresh_native(result['refreshToken'], additionaldata=additionaldata)
+                auth.tokendata['_clientId'] = broker_client
+                auth.tokendata['_nestedClientId'] = args.client
+                auth.tokendata['_nestedRedirectUrl'] = finalru
             auth.outfile = args.tokenfile
             auth.save_tokens(args)
     elif args.command == 'fidoauth':
@@ -2054,13 +2053,26 @@ def main():
             auth.set_force_mfa()
         if args.scope:
             auth.set_scope(args.scope)
+        if args.autobroker:
+            if args.url:
+                print('Cannot use autobroker in combination with the --url parameter, specify only one of the two')
+                return
+            brokerresult = autobroker(args, auth)
+            if not brokerresult:
+                return
+            broker_client, finalru = brokerresult
+            # request token for broker client first
+            auth.set_client_id(broker_client)
+            auth.use_pkce = True
+            if not args.tokens_stdout:
+                print(f'Fetching token for broker client {broker_client}')
         # Intercept if custom UA is set
         custom_ua = args.user_agent is not None
         if args.redirect_url:
             redirect_url = args.redirect_url
         else:
             redirect_url = find_redirurl_for_client(auth.client_id, interactive=False)
-        selauth = SeleniumAuthentication(auth, deviceauth, redirect_url, proxy=args.proxy, proxy_type=args.proxy_type)
+        selauth = SeleniumAuthentication(auth, deviceauth, redirect_url, proxy=args.proxy, proxy_type=args.proxy_type, headless=args.headless)
         password, otpseed = selauth.get_keepass_cred(args.username, args.keepass, args.keepass_password)
         if args.url:
             url = args.url
@@ -2080,6 +2092,23 @@ def main():
             return
         if not result:
             return
+        if args.autobroker:
+            # Exchange broker refresh token for final app refresh token
+            additionaldata = {
+                'brk_client_id': broker_client,
+                'redirect_uri': finalru
+            }
+            auth.set_client_id(args.client)
+            if not args.tokens_stdout:
+                print(f'Fetching token for final client based on broker refresh token')
+            if args.scope:
+                auth.authenticate_with_refresh_native_v2(result['refreshToken'], additionaldata=additionaldata)
+            else:
+                auth.authenticate_with_refresh_native(result['refreshToken'], additionaldata=additionaldata)
+            # cache broker data in auth file
+            auth.tokendata['_clientId'] = broker_client
+            auth.tokendata['_nestedClientId'] = args.client
+            auth.tokendata['_nestedRedirectUrl'] = args.broker_redirect_url
         auth.outfile = args.tokenfile
         auth.save_tokens(args)
     elif args.command == 'browserprtauth':

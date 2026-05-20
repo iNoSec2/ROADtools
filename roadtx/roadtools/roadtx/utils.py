@@ -3,6 +3,7 @@ import codecs
 import json
 import re
 import base64, binascii, argparse, textwrap, uuid
+from urllib.parse import urlparse
 
 def find_redirurl_for_client(client, interactive=True, broker=False):
     '''
@@ -29,6 +30,54 @@ def find_redirurl_for_client(client, interactive=True, broker=False):
         return app['preferred_noninteractive_redirurl']
     # Return default URL even if it might not work since some follow up functions break when called with a None value
     return 'https://login.microsoftonline.com/common/oauth2/nativeclient'
+
+def autobroker(args, auth, tokenobject=None):
+    # Automatic broker app selection
+
+    # Load scope data - contains redirect URLs for the broker
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    datafile = os.path.join(current_dir, 'firstpartyscopes.json')
+    with codecs.open(datafile,'r','utf-8') as infile:
+        data = json.load(infile)
+    if not args.client:
+        print('Client ID is required for autobroker flag, please specify with -c')
+        return False
+    if hasattr(args, 'broker_client') and args.broker_client:
+        originclient = auth.lookup_client_id(args.broker_client)
+    elif tokenobject and '_clientId' in tokenobject:
+        originclient = auth.lookup_client_id(tokenobject['_clientId'])
+    else:
+        if tokenobject:
+            # don't print this if we are in the interactiveauth flow
+            print('Could not determine client, guessing the client based on redirect URL found')
+        originclient = 'guess'
+    try:
+        targetclient = data['apps'][auth.lookup_client_id(args.client)]
+    except KeyError:
+        print(f'Unknown client with ID {args.client} is not found in roadtx built-in client list. Please specify broker parameters manually.')
+        return False
+    validru = False
+    for redirect_url in targetclient['redirect_uris']:
+        if originclient == 'guess' and redirect_url.startswith('brk-'):
+            validru = True
+            finalru = redirect_url
+            break
+        if redirect_url.startswith(f'brk-{originclient}'):
+            validru = True
+            finalru = redirect_url
+            break
+    if not validru:
+        print(f'Could not find a valid broker redirect URL on this client matching the original client ID {originclient}')
+        return False
+    parsed = urlparse(finalru)
+    if originclient == 'guess':
+        # We know the client ID now
+        originclient = parsed.scheme.lower()[4:]
+    # Copy correct origin
+    auth.set_origin_value(f'https://{parsed.hostname}')
+    args.broker_redirect_url = finalru
+    args.broker_client = originclient
+    return originclient, finalru
 
 # Refresh token analysis by @blurbdust
 def guid_to_string(binary_guid):
