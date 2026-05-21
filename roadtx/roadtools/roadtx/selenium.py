@@ -301,7 +301,7 @@ class SeleniumAuthentication():
                 WebDriverWait(driver, 1).until(lambda d: d.find_element(By.ID, "idonotexist"))
             except TimeoutException:
                 pass
-            els = WebDriverWait(driver, 2).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "idSIButton9"))
+            els = WebDriverWait(driver, 2).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "KmsiDescription"))
             if not '?code=' in driver.current_url:
                 # handle KMSI first
                 try:
@@ -368,7 +368,7 @@ class SeleniumAuthentication():
             else:
                 timeout = 1200
             try:
-                els = WebDriverWait(driver, timeout).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "idSIButton9"))
+                els = WebDriverWait(driver, timeout).until(lambda d: '?code=' in d.current_url or d.find_element(By.ID, "KmsiDescription"))
                 if not '?code=' in driver.current_url:
                     # Handle KMSI
                     try:
