@@ -335,4 +335,13 @@ export class UtilitiesService {
       return dateString;
     }
   }
+
+  public translateAuthStrength(guid: string): string {
+    const builtIn: { [key: string]: string } = {
+      '00000000-0000-0000-0000-000000000002': 'Multi-factor authentication',
+      '00000000-0000-0000-0000-000000000003': 'Passwordless MFA',
+      '00000000-0000-0000-0000-000000000004': 'Phishing-resistant MFA'
+    };
+    return builtIn[guid] ?? `Unknown auth strength policy: ${guid} (probably custom)`;
+  }
 }

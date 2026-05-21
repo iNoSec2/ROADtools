@@ -549,6 +549,7 @@
     <div *ngIf="user.userType == 'Guest'" class="mat-elevation-z4 pagedescription">
       Policy processing for guest users is currently not completely accurate. Policies scoped to guest types are not processed.
     </div>
+    <div class="mat-elevation-z4 pagedescription">This table shows Conditional Access policies scoped to the current user. It only shows enabled policies, policies in report only mode or disabled policies are skipped.</div>
     <table mat-table [dataSource]="policies" class="full-width-table">
 
       <!-- Name + state -->
@@ -661,19 +662,83 @@
             </mat-chip-list>
           </div>
 
+          <div *ngIf="row.policyDetail.Conditions.SignInRisks?.Include" class="policy-chip-section">
+            <span class="policy-section-label">Sign in risk</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let risk of row.policyDetail.Conditions.SignInRisks.Include[0].SignInRisks" disableRipple>{{risk}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.Conditions.UserRisks?.Include" class="policy-chip-section">
+            <span class="policy-section-label">User risk</span>
+            <mat-chip-list>
+              <mat-chip *ngFor="let risk of row.policyDetail.Conditions.UserRisks.Include[0].UserRisks" disableRipple>{{risk}}</mat-chip>
+            </mat-chip-list>
+          </div>
+
           <div *ngIf="row.policyDetail.Controls?.length > 0" class="policy-chip-section">
             <span class="policy-section-label">Sign-in controls</span>
             <mat-chip-list>
-              <mat-chip *ngFor="let control of row.policyDetail.Controls" disableRipple>
-                {{control.Control ? control.Control.join(' or ') : ''}}{{control.AuthStrengthIds ? 'Auth strength: ' + control.AuthStrengthIds.join(', ') : ''}}
-              </mat-chip>
+              <ng-container *ngFor="let control of row.policyDetail.Controls">
+                <mat-chip disableRipple *ngIf="control.Control">
+                  {{control.Control.join(' or ')}}
+                </mat-chip>
+                <ng-container *ngIf="control.AuthStrengthIds">
+                  <mat-chip disableRipple *ngFor="let guid of control.AuthStrengthIds"
+                            [matTooltip]="guid">
+                    Auth strength: {{utils.translateAuthStrength(guid)}}
+                  </mat-chip>
+                </ng-container>
+              </ng-container>
+            </mat-chip-list>
+          </div>
+
+          <div *ngIf="row.policyDetail.ExtensibleControls?.length > 0" class="policy-chip-section">
+            <span class="policy-section-label">Sign-in Extensible Controls</span>
+            <mat-chip-list>
+              <ng-container *ngFor="let control of row.policyDetail.ExtensibleControls">
+                <mat-chip disableRipple *ngIf="control == 'MicrosoftManagedRemediation'">
+                  Microsoft Managed risk remediation
+                </mat-chip>
+                <mat-chip disableRipple *ngIf="control != 'MicrosoftManagedRemediation'">
+                  {{control}}
+                </mat-chip>
+              </ng-container>
             </mat-chip-list>
           </div>
 
           <div *ngIf="row.policyDetail.SessionControls" class="policy-chip-section">
             <span class="policy-section-label">Session controls</span>
             <mat-chip-list>
-              <mat-chip *ngFor="let control of row.policyDetail.SessionControls" disableRipple>{{control}}</mat-chip>
+              <ng-container *ngFor="let control of row.policyDetail.SessionControls">
+
+                <!-- SignInFrequency with sub-type branching -->
+                <ng-container *ngIf="control === 'SignInFrequency'">
+                  <mat-chip disableRipple *ngIf="!row.policyDetail.SignInFrequencyType">
+                    SignInFrequency (Unknown setting)
+                  </mat-chip>
+                  <mat-chip disableRipple *ngIf="row.policyDetail.SignInFrequencyType === 30">
+                    SignInFrequency (Every time)
+                  </mat-chip>
+                  <mat-chip disableRipple *ngIf="row.policyDetail.SignInFrequencyType === 10">
+                    SignInFrequency (Every {{row.policyDetail.SignInFrequencyTimeSpan}})
+                  </mat-chip>
+                  <mat-chip disableRipple *ngIf="row.policyDetail.SignInFrequencyType !== 30 && row.policyDetail.SignInFrequencyType !== 10 && row.policyDetail.SignInFrequencyType">
+                    SignInFrequency (Unknown SIF type {{row.policyDetail.SignInFrequencyType}})
+                  </mat-chip>
+                </ng-container>
+
+                <!-- PersistentBrowserSessionMode -->
+                <mat-chip disableRipple *ngIf="control === 'PersistentBrowserSessionMode'">
+                  PersistentBrowserSession: {{row.policyDetail.PersistentBrowserSessionMode}}
+                </mat-chip>
+
+                <!-- Everything else -->
+                <mat-chip disableRipple *ngIf="control !== 'SignInFrequency' && control !== 'PersistentBrowserSessionMode'">
+                  {{control}}
+                </mat-chip>
+
+              </ng-container>
             </mat-chip-list>
           </div>
 

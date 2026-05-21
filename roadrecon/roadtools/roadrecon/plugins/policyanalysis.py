@@ -131,7 +131,8 @@ class PoliciesPlugin():
             'Roles': self._get_role,
             'ServicePrincipals': self._get_serviceprincipal,
             'ServicePrincipalFilterRule': self._get_serviceprincipalrule,
-            'GuestsOrExternalUsers': self._translate_guestsexternal
+            'GuestsOrExternalUsers': self._translate_guestsexternal,
+            'AgenticServicePrincipals': self._get_serviceprincipal
         }
         inscope_uids = []
         for ctype, clist in crit.items():

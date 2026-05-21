@@ -337,36 +337,28 @@ class AccessPoliciesPlugin():
         return ot
 
     def _parse_signinrisks(self, cond):
-        try:
-            srcond = cond['SignInRisks']
-        except KeyError:
-            return ''
-
-        ot = '<strong>Including</strong>: '
-        for icrit in srcond['Include']:
-            ot += ', '.join([escape(crit) for crit in icrit['SignInRisks']])
-
-        if 'Exclude' in srcond:
-            ot += '\n<br /><strong>Excluding</strong>: '
-            for icrit in srcond['Exclude']:
-                ot += ', '.join([escape(crit) for crit in icrit['SignInRisks']])
-
-        return ot
+        return self._parse_risks(cond, 'SignInRisks')
 
     def _parse_agentrisks(self, cond):
+        return self._parse_risks(cond, 'AgentIdRisks')
+
+    def _parse_userrisks(self, cond):
+        return self._parse_risks(cond, 'UserRisks')
+
+    def _parse_risks(self, cond, riskskey):
         try:
-            srcond = cond['AgentIdRisks']
+            srcond = cond[riskskey]
         except KeyError:
             return ''
 
         ot = '<strong>Including</strong>: '
         for icrit in srcond['Include']:
-            ot += ', '.join([escape(crit) for crit in icrit['AgentIdRisks']])
+            ot += ', '.join([escape(crit) for crit in icrit[riskskey]])
 
         if 'Exclude' in srcond:
             ot += '\n<br /><strong>Excluding</strong>: '
             for icrit in srcond['Exclude']:
-                ot += ', '.join([escape(crit) for crit in icrit['AgentIdRisks']])
+                ot += ', '.join([escape(crit) for crit in icrit[riskskey]])
 
         return ot
 
@@ -540,6 +532,17 @@ class AccessPoliciesPlugin():
                 ucond.append(condition)
         return ', '.join(ucond)
 
+    def _parse_extensiblecontrols(self, cond):
+        if not 'ExtensibleControls' in cond:
+            return ''
+        ucond = []
+        for control in cond['ExtensibleControls']:
+            if control == 'MicrosoftManagedRemediation':
+                ucond.append('Microsoft Managed risk remediation')
+            else:
+                ucond.append(f'Unknown extensible control: {control}')
+        return ', '.join(ucond)
+
     def _parse_compressed_cidr(self,detail):
         if not 'CompressedCidrIpRanges' in detail:
             return ''
@@ -598,8 +601,10 @@ class AccessPoliciesPlugin():
             out['locations'] = self.parse_wrapper(self._parse_locations, conditions, policy)
             out['clients'] = self.parse_wrapper(self._parse_clients, conditions, policy)
             out['signinrisks'] = self.parse_wrapper(self._parse_signinrisks, conditions, policy)
+            out['userrisks'] = self.parse_wrapper(self._parse_userrisks, conditions, policy)
             out['agentrisks'] = self.parse_wrapper(self._parse_agentrisks, conditions, policy)
             out['sessioncontrols'] = self._parse_sessioncontrols(detail)
+            out['extensiblecontrols'] = self._parse_extensiblecontrols(detail)
             out['devices'] = self.parse_wrapper(self._parse_devices, conditions, policy)
 
             try:
@@ -683,12 +688,16 @@ class AccessPoliciesPlugin():
                 table += '<tr><td>At locations</td><td>{0}</td></tr>'.format(out['locations'])
             if out['signinrisks'] != '':
                 table += '<tr><td>Sign-in risks</td><td>{0}</td></tr>'.format(out['signinrisks'])
+            if out['userrisks'] != '':
+                table += '<tr><td>User risks</td><td>{0}</td></tr>'.format(out['userrisks'])
             if out['agentrisks'] != '':
                 table += '<tr><td>Agent risks</td><td>{0}</td></tr>'.format(out['agentrisks'])
             if out['authflows'] != '':
                 table += '<tr><td>Authentication flows</td><td>{0}</td></tr>'.format(out['authflows'])
             if out['controls'] != '':
                 table += '<tr><td>Controls</td><td>{0}</td></tr>'.format(out['controls'])
+            if out['extensiblecontrols'] != '':
+                table += '<tr><td>Extensible controls</td><td>{0}</td></tr>'.format(out['extensiblecontrols'])
             if out['sessioncontrols'] != '':
                 table += '<tr><td>Session controls</td><td>{0}</td></tr>'.format(out['sessioncontrols'])
             table += '</tbody>'
